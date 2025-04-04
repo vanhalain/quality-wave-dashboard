@@ -1,8 +1,12 @@
 
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/lib/auth';
 import { BadgeCheck, Edit, Trash, UserPlus } from 'lucide-react';
+import { UserEditDialog } from '@/components/users/UserEditDialog';
+import { useToast } from '@/components/ui/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface User {
   id: number;
@@ -50,6 +54,13 @@ const mockUsers: User[] = [
 ];
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | undefined>();
+  const [dialogMode, setDialogMode] = useState<'edit' | 'add'>('add');
+  const { toast } = useToast();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -87,11 +98,61 @@ export default function UsersPage() {
     }
   };
 
+  const handleAddUser = () => {
+    setCurrentUser(undefined);
+    setDialogMode('add');
+    setIsDialogOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setCurrentUser(user);
+    setDialogMode('edit');
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setCurrentUser(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteUser = () => {
+    if (currentUser) {
+      setUsers(users.filter(user => user.id !== currentUser.id));
+      toast({
+        title: "User deleted",
+        description: `${currentUser.name} has been removed from the system.`,
+      });
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleSaveUser = (userData: any) => {
+    if (dialogMode === 'add') {
+      const newUser = {
+        ...userData,
+        id: Math.max(...users.map(u => u.id)) + 1,
+        lastLogin: new Date().toISOString()
+      };
+      setUsers([...users, newUser]);
+      toast({
+        title: "User added",
+        description: `${userData.name} has been added to the system.`,
+      });
+    } else {
+      setUsers(users.map(user => user.id === userData.id ? userData : user));
+      toast({
+        title: "User updated",
+        description: `${userData.name}'s information has been updated.`,
+      });
+    }
+    setIsDialogOpen(false);
+  };
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-qa-charcoal">Users</h1>
-        <Button>
+        <Button onClick={handleAddUser}>
           <UserPlus className="h-4 w-4 mr-2" />
           Add User
         </Button>
@@ -111,7 +172,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {mockUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="hover:bg-muted/50">
                   <td className="font-medium">{user.name}</td>
                   <td>{user.email}</td>
@@ -135,10 +196,10 @@ export default function UsersPage() {
                   </td>
                   <td>
                     <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user)}>
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>
@@ -149,6 +210,32 @@ export default function UsersPage() {
           </table>
         </div>
       </div>
+
+      <UserEditDialog 
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSave={handleSaveUser}
+        user={currentUser}
+        mode={dialogMode}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {currentUser?.name}'s account and remove all associated data.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

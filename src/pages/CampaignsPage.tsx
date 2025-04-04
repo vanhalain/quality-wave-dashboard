@@ -1,73 +1,72 @@
 
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Campaign, useCampaignStore } from '@/lib/campaigns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCampaignStore, Campaign } from '@/lib/campaigns';
+import { FileText, Edit, Trash, Eye, BarChart } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
+import { CampaignEditDialog } from '@/components/campaigns/CampaignEditDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function CampaignsPage() {
-  const { campaigns, addCampaign } = useCampaignStore();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    status: 'active',
-    recordCount: 0,
-    evaluatedCount: 0,
-  });
+  const { campaigns, addCampaign, updateCampaign, deleteCampaign } = useCampaignStore();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentCampaign, setCurrentCampaign] = useState<Campaign | undefined>();
+  const [dialogMode, setDialogMode] = useState<'edit' | 'add'>('add');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleAddCampaign = () => {
+    setCurrentCampaign(undefined);
+    setDialogMode('add');
+    setIsEditDialogOpen(true);
   };
 
-  const handleStatusChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, status: value as 'active' | 'inactive' | 'completed' }));
+  const handleEditCampaign = (campaign: Campaign) => {
+    setCurrentCampaign(campaign);
+    setDialogMode('edit');
+    setIsEditDialogOpen(true);
   };
 
-  const handleRecordCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10) || 0;
-    setFormData((prev) => ({ ...prev, recordCount: value }));
+  const handleViewCampaign = (campaign: Campaign) => {
+    navigate(`/campaigns/${campaign.id}`);
   };
 
-  const handleSubmit = () => {
-    if (!formData.name) {
+  const handleDeleteCampaign = (campaign: Campaign) => {
+    setCurrentCampaign(campaign);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCampaign = () => {
+    if (currentCampaign) {
+      deleteCampaign(currentCampaign.id);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Campaign name is required",
+        title: "Campaign deleted",
+        description: `${currentCampaign.name} has been removed.`,
       });
-      return;
+      setIsDeleteDialogOpen(false);
     }
+  };
 
-    addCampaign({
-      name: formData.name,
-      description: formData.description,
-      status: formData.status as 'active' | 'inactive' | 'completed',
-      recordCount: formData.recordCount,
-      evaluatedCount: 0,
-    });
-
-    toast({
-      title: "Campaign created",
-      description: `${formData.name} has been created successfully`,
-    });
-
-    setIsAddDialogOpen(false);
-    setFormData({
-      name: '',
-      description: '',
-      status: 'active',
-      recordCount: 0,
-      evaluatedCount: 0,
-    });
+  const handleSaveCampaign = (campaignData: any) => {
+    if (dialogMode === 'add') {
+      addCampaign(campaignData);
+      toast({
+        title: "Campaign created",
+        description: `${campaignData.name} has been created successfully.`,
+      });
+    } else if (currentCampaign) {
+      updateCampaign(currentCampaign.id, campaignData);
+      toast({
+        title: "Campaign updated",
+        description: `${campaignData.name} has been updated successfully.`,
+      });
+    }
+    setIsEditDialogOpen(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -79,140 +78,112 @@ export default function CampaignsPage() {
     });
   };
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'qa-status-active';
-      case 'inactive':
-        return 'qa-status-inactive';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium';
-      default:
-        return 'qa-status-inactive';
-    }
-  };
-
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-qa-charcoal">Campaigns</h1>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Campaign
+        <Button onClick={handleAddCampaign}>
+          <FileText className="h-4 w-4 mr-2" />
+          Add Campaign
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {campaigns.map((campaign) => {
+          const completionPercentage = Math.round((campaign.evaluatedCount / campaign.recordCount) * 100);
+          
+          return (
+            <Card key={campaign.id} className="overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{campaign.name}</CardTitle>
+                    <CardDescription className="mt-1">{formatDate(campaign.createdAt)}</CardDescription>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    campaign.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : campaign.status === 'inactive'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                  {campaign.description}
+                </p>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{campaign.evaluatedCount} of {campaign.recordCount} evaluated</span>
+                    <span className="font-medium">{completionPercentage}%</span>
+                  </div>
+                  <Progress value={completionPercentage} className="h-2" />
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
+                <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaign)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View
+                </Button>
+                <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleEditCampaign(campaign)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteCampaign(campaign)}>
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
+
+      {campaigns.length === 0 && (
+        <Card className="p-8 text-center">
+          <CardContent>
+            <BarChart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">No Campaigns Yet</p>
+            <p className="text-muted-foreground mb-4">
+              Get started by creating your first quality assessment campaign.
+            </p>
+            <Button onClick={handleAddCampaign}>
+              <FileText className="h-4 w-4 mr-2" />
+              Create Campaign
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Campaign</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Campaign Name</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleFormChange}
-                  placeholder="Enter campaign name" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  name="description" 
-                  value={formData.description} 
-                  onChange={handleFormChange}
-                  placeholder="Enter campaign description" 
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recordCount">Total Records</Label>
-                <Input 
-                  id="recordCount" 
-                  name="recordCount" 
-                  type="number"
-                  value={formData.recordCount.toString()} 
-                  onChange={handleRecordCountChange}
-                  min={0}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSubmit}>Save Campaign</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <div className="qa-card">
-        <div className="overflow-x-auto">
-          <table className="qa-table">
-            <thead>
-              <tr>
-                <th className="rounded-tl-md">Campaign Name</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Progress</th>
-                <th className="rounded-tr-md">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((campaign: Campaign) => (
-                <tr key={campaign.id} className="hover:bg-muted/50">
-                  <td className="font-medium">{campaign.name}</td>
-                  <td>
-                    <span className={getStatusClass(campaign.status)}>
-                      {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                    </span>
-                  </td>
-                  <td>{formatDate(campaign.createdAt)}</td>
-                  <td>
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
-                        <div 
-                          className="bg-qa-blue h-2.5 rounded-full" 
-                          style={{ width: `${(campaign.evaluatedCount / campaign.recordCount) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        {campaign.evaluatedCount} / {campaign.recordCount}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/campaigns/${campaign.id}`}>View</a>
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/campaigns/${campaign.id}/edit`}>Edit</a>
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <CampaignEditDialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        onSave={handleSaveCampaign}
+        campaign={currentCampaign}
+        mode={dialogMode}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the campaign "{currentCampaign?.name}" and all its associated data.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteCampaign} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
