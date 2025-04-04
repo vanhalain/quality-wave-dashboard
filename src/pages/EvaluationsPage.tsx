@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { FormBuilder } from '@/components/evaluation/FormBuilder';
 import { TranscriptChat } from '@/components/evaluation/TranscriptChat';
+import { DragDropFormBuilder } from '@/components/evaluation/DragDropFormBuilder';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FormBuilder } from '@/components/evaluation/FormBuilder';
 
 export default function EvaluationsPage() {
   // Mock messages data
@@ -41,6 +42,8 @@ export default function EvaluationsPage() {
     },
   ];
 
+  const [builderType, setBuilderType] = useState<'basic' | 'dnd'>('dnd');
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
@@ -67,10 +70,25 @@ export default function EvaluationsPage() {
             <Tabs defaultValue="form">
               <TabsList className="mb-4">
                 <TabsTrigger value="form">Evaluation Form</TabsTrigger>
+                <TabsTrigger value="builder">Form Builder</TabsTrigger>
                 <TabsTrigger value="results">Results</TabsTrigger>
               </TabsList>
               <TabsContent value="form">
                 <FormBuilder />
+              </TabsContent>
+              <TabsContent value="builder">
+                <Tabs defaultValue="dnd" onValueChange={(value) => setBuilderType(value as 'basic' | 'dnd')}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="basic">Basic Builder</TabsTrigger>
+                    <TabsTrigger value="dnd">Drag & Drop Builder</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="basic">
+                    <FormBuilder />
+                  </TabsContent>
+                  <TabsContent value="dnd">
+                    <DragDropFormBuilder />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
               <TabsContent value="results">
                 <div className="p-4 text-center text-muted-foreground">
