@@ -8,6 +8,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import UsersPage from "./pages/UsersPage";
+import EvaluationsPage from "./pages/EvaluationsPage";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./lib/auth";
 
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/campaigns" element={<ProtectedRoute><CampaignsPage /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+          <Route path="/evaluations" element={<ProtectedRoute><EvaluationsPage /></ProtectedRoute>} />
           
           {/* TODO: Add other routes as needed */}
           <Route path="*" element={<NotFound />} />
