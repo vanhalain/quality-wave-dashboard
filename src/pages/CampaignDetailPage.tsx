@@ -173,19 +173,19 @@ export default function CampaignDetailPage() {
                   </div>
                   
                   <div className="divide-y">
-                    {recentEvaluations.map(eval => (
-                      <div key={eval.id} className="py-3 flex items-center justify-between">
+                    {recentEvaluations.map(evaluation => (
+                      <div key={evaluation.id} className="py-3 flex items-center justify-between">
                         <div>
-                          <p className="font-medium">{eval.name}</p>
-                          <p className="text-sm text-muted-foreground">{eval.date}</p>
+                          <p className="font-medium">{evaluation.name}</p>
+                          <p className="text-sm text-muted-foreground">{evaluation.date}</p>
                         </div>
                         <div className="flex items-center">
                           <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                            eval.score >= 90 ? 'bg-green-100 text-green-800' :
-                            eval.score >= 80 ? 'bg-blue-100 text-blue-800' :
+                            evaluation.score >= 90 ? 'bg-green-100 text-green-800' :
+                            evaluation.score >= 80 ? 'bg-blue-100 text-blue-800' :
                             'bg-amber-100 text-amber-800'
                           }`}>
-                            {eval.score}%
+                            {evaluation.score}%
                           </span>
                         </div>
                       </div>
