@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Grid as GridIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,8 +19,18 @@ import { QuestionType, Question, useGridStore } from '@/lib/evaluation-grids';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate, useParams } from 'react-router-dom';
 
-export function FormBuilder() {
+interface FormBuilderProps {
+  selectedGridId?: number | null;
+}
+
+export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderProps = {}) {
+  const { gridId } = useParams();
+  const navigate = useNavigate();
+  
+  const initialSelectedGridId = propSelectedGridId || (gridId ? parseInt(gridId) : null) || null;
+  
   const { grids, addGrid, addQuestionToGrid, deleteQuestion } = useGridStore();
   const { toast } = useToast();
   
@@ -34,7 +44,7 @@ export function FormBuilder() {
   const [minValue, setMinValue] = useState<number>(0);
   const [maxValue, setMaxValue] = useState<number>(10);
   const [required, setRequired] = useState(true);
-  const [selectedGridId, setSelectedGridId] = useState<number | null>(grids[0]?.id || null);
+  const [selectedGridId, setSelectedGridId] = useState<number | null>(initialSelectedGridId);
 
   const handleAddOption = () => {
     setOptions([...options, { label: '', value: 0 }]);
@@ -65,11 +75,13 @@ export function FormBuilder() {
       return;
     }
 
-    addGrid({
+    const newGrid = {
       name: gridName,
       description: gridDescription,
       questions: []
-    });
+    };
+    
+    addGrid(newGrid);
 
     toast({
       title: "Grille créée",
@@ -139,10 +151,24 @@ export function FormBuilder() {
     });
   };
 
+  const handleGoToGrids = () => {
+    navigate('/grids');
+  };
+
   const selectedGrid = grids.find(grid => grid.id === selectedGridId);
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold flex items-center">
+          <GridIcon className="h-5 w-5 mr-2" />
+          {selectedGrid ? selectedGrid.name : 'Sélectionner une grille'}
+        </h2>
+        <Button variant="outline" size="sm" onClick={handleGoToGrids}>
+          Gérer les grilles
+        </Button>
+      </div>
+      
       <div className="grid md:grid-cols-2 gap-6">
         {/* Création de grille */}
         <Card>

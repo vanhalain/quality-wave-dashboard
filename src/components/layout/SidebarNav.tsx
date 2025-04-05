@@ -1,7 +1,17 @@
 
-import { BarChart3, FileText, Home, Settings, Users } from 'lucide-react';
+import { BarChart3, FileText, Home, Settings, Users, Grid, PenSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle
+} from '@/components/ui/navigation-menu';
+import React from 'react';
 
 interface SidebarNavProps {
   collapsed: boolean;
@@ -25,6 +35,23 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
       name: 'Evaluations',
       href: '/evaluations',
       icon: BarChart3,
+    },
+    {
+      name: 'Grilles',
+      href: '/grids',
+      icon: Grid,
+      submenu: [
+        {
+          name: 'Liste des grilles',
+          href: '/grids',
+          icon: Grid,
+        },
+        {
+          name: 'Créateur de grille',
+          href: '/grids/editor',
+          icon: PenSquare,
+        },
+      ],
     },
     {
       name: 'Users',
@@ -56,18 +83,54 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
         <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.name}>
-              <Link
-                to={item.href}
-                className={cn(
-                  "flex items-center px-3 py-2 rounded-md transition-colors",
-                  location.pathname === item.href
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span className="ml-3">{item.name}</span>}
-              </Link>
+              {item.submenu && !collapsed ? (
+                <div className="mb-1">
+                  <div 
+                    className={cn(
+                      "flex items-center px-3 py-2 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/30",
+                      (location.pathname === item.href || item.submenu.some(sub => location.pathname.startsWith(sub.href)))
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : ""
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="ml-3">{item.name}</span>
+                  </div>
+                  <ul className="mt-1 ml-6 space-y-1">
+                    {item.submenu.map((subItem) => (
+                      <li key={subItem.name}>
+                        <Link
+                          to={subItem.href}
+                          className={cn(
+                            "flex items-center px-3 py-2 rounded-md transition-colors text-sm",
+                            location.pathname === subItem.href || 
+                            (subItem.href !== '/grids' && location.pathname.startsWith(subItem.href))
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                          )}
+                        >
+                          <subItem.icon className="h-4 w-4 flex-shrink-0" />
+                          <span className="ml-2">{subItem.name}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <Link
+                  to={item.href}
+                  className={cn(
+                    "flex items-center px-3 py-2 rounded-md transition-colors",
+                    location.pathname === item.href || 
+                    (item.submenu && item.submenu.some(sub => location.pathname.startsWith(sub.href)))
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span className="ml-3">{item.name}</span>}
+                </Link>
+              )}
             </li>
           ))}
         </ul>

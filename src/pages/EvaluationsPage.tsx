@@ -1,13 +1,21 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TranscriptChat } from '@/components/evaluation/TranscriptChat';
-import { DragDropFormBuilder } from '@/components/evaluation/DragDropFormBuilder';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormBuilder } from '@/components/evaluation/FormBuilder';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useCampaignStore } from '@/lib/campaigns';
+import { useGridStore } from '@/lib/evaluation-grids';
+import { GridCheck } from 'lucide-react';
 
 export default function EvaluationsPage() {
+  const navigate = useNavigate();
+  const { campaigns } = useCampaignStore();
+  const { getGrid } = useGridStore();
+
   // Mock messages data
   const messages = [
     {
@@ -42,12 +50,22 @@ export default function EvaluationsPage() {
     },
   ];
 
-  const [builderType, setBuilderType] = useState<'basic' | 'dnd'>('dnd');
+  // Chercher une campagne avec une grille associée pour la démo
+  const campaignWithGrid = campaigns.find(campaign => campaign.gridId);
+  const selectedGrid = campaignWithGrid?.gridId ? getGrid(campaignWithGrid.gridId) : null;
 
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-qa-charcoal">Evaluation</h1>
+        <h1 className="text-3xl font-bold text-qa-charcoal">Évaluations</h1>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => navigate('/grids')}>
+            Gérer les grilles
+          </Button>
+          <Button onClick={() => navigate('/grids/editor')}>
+            Créer une grille
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -63,36 +81,44 @@ export default function EvaluationsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quality Assessment</CardTitle>
-            <CardDescription>Evaluate the conversation based on criteria</CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Quality Assessment</CardTitle>
+                <CardDescription>Evaluate the conversation based on criteria</CardDescription>
+              </div>
+              {campaignWithGrid && selectedGrid && (
+                <div className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs">
+                  <GridCheck className="w-4 h-4 mr-1" />
+                  Grille: {selectedGrid.name}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="form">
               <TabsList className="mb-4">
-                <TabsTrigger value="form">Evaluation Form</TabsTrigger>
-                <TabsTrigger value="builder">Form Builder</TabsTrigger>
-                <TabsTrigger value="results">Results</TabsTrigger>
+                <TabsTrigger value="form">Évaluation</TabsTrigger>
+                <TabsTrigger value="results">Résultats</TabsTrigger>
               </TabsList>
               <TabsContent value="form">
-                <FormBuilder />
-              </TabsContent>
-              <TabsContent value="builder">
-                <Tabs defaultValue="dnd" onValueChange={(value) => setBuilderType(value as 'basic' | 'dnd')}>
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="basic">Basic Builder</TabsTrigger>
-                    <TabsTrigger value="dnd">Drag & Drop Builder</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="basic">
-                    <FormBuilder />
-                  </TabsContent>
-                  <TabsContent value="dnd">
-                    <DragDropFormBuilder />
-                  </TabsContent>
-                </Tabs>
+                {selectedGrid ? (
+                  <FormBuilder selectedGridId={selectedGrid.id} />
+                ) : (
+                  <div className="text-center p-6 border rounded-lg bg-muted/20">
+                    <GridCheck className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium mb-2">Aucune grille sélectionnée</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Veuillez sélectionner une grille d'évaluation pour cette campagne
+                    </p>
+                    <Button variant="outline" onClick={() => navigate('/campaigns')}>
+                      Configurer la campagne
+                    </Button>
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="results">
                 <div className="p-4 text-center text-muted-foreground">
-                  Results will be displayed after submission
+                  Les résultats seront affichés après la soumission
                 </div>
               </TabsContent>
             </Tabs>

@@ -11,6 +11,8 @@ import CampaignDetailPage from "./pages/CampaignDetailPage";
 import UsersPage from "./pages/UsersPage";
 import EvaluationsPage from "./pages/EvaluationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import GridsPage from "./pages/GridsPage";
+import GridEditorPage from "./pages/GridEditorPage";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./lib/auth";
 
@@ -41,6 +43,9 @@ const App = () => (
           <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetailPage /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
           <Route path="/evaluations" element={<ProtectedRoute><EvaluationsPage /></ProtectedRoute>} />
+          <Route path="/grids" element={<ProtectedRoute><GridsPage /></ProtectedRoute>} />
+          <Route path="/grids/editor" element={<ProtectedRoute><GridEditorPage /></ProtectedRoute>} />
+          <Route path="/grids/editor/:gridId" element={<ProtectedRoute><GridEditorPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           
           <Route path="*" element={<NotFound />} />

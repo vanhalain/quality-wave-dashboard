@@ -11,6 +11,7 @@ export interface Campaign {
   updatedAt: string;
   recordCount: number;
   evaluatedCount: number;
+  gridId?: number;
 }
 
 interface CampaignStore {
@@ -35,6 +36,7 @@ export const useCampaignStore = create<CampaignStore>()(
           updatedAt: '2025-01-15T00:00:00.000Z',
           recordCount: 50,
           evaluatedCount: 28,
+          gridId: 1,
         },
         {
           id: 2,

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Campaign } from '@/lib/campaigns';
+import { useGridStore } from '@/lib/evaluation-grids';
 
 interface CampaignFormData {
   id?: number;
@@ -15,6 +16,7 @@ interface CampaignFormData {
   status: 'active' | 'inactive' | 'completed';
   recordCount?: number;
   evaluatedCount?: number;
+  gridId?: number | null;
 }
 
 interface CampaignEditDialogProps {
@@ -33,7 +35,10 @@ export function CampaignEditDialog({ open, onClose, onSave, campaign, mode }: Ca
     status: campaign?.status || 'active',
     recordCount: campaign?.recordCount,
     evaluatedCount: campaign?.evaluatedCount,
+    gridId: campaign?.gridId || null,
   });
+  
+  const { grids } = useGridStore();
 
   useEffect(() => {
     if (campaign) {
@@ -44,6 +49,7 @@ export function CampaignEditDialog({ open, onClose, onSave, campaign, mode }: Ca
         status: campaign.status,
         recordCount: campaign.recordCount,
         evaluatedCount: campaign.evaluatedCount,
+        gridId: campaign.gridId || null,
       });
     } else {
       setFormData({
@@ -52,6 +58,7 @@ export function CampaignEditDialog({ open, onClose, onSave, campaign, mode }: Ca
         status: 'active',
         recordCount: 0,
         evaluatedCount: 0,
+        gridId: null,
       });
     }
   }, [campaign, open]);
@@ -114,6 +121,29 @@ export function CampaignEditDialog({ open, onClose, onSave, campaign, mode }: Ca
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="gridId" className="text-right">
+                Grille
+              </Label>
+              <Select 
+                value={formData.gridId?.toString() || ''} 
+                onValueChange={(value) => 
+                  setFormData({ ...formData, gridId: value ? parseInt(value) : null })
+                }
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner une grille" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Aucune</SelectItem>
+                  {grids.map(grid => (
+                    <SelectItem key={grid.id} value={grid.id.toString()}>
+                      {grid.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
