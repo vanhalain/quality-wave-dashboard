@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, GripVertical, FileText, ListChecks, Check, X } from 'lucide-react';
+import { PlusCircle, Trash2, GripVertical, FileText, ListChecks, Check, X, Edit } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -45,14 +45,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
 
 type SortableQuestionProps = {
   question: Question;
   onDelete: (id: number) => void;
+  onEdit: (id: number) => void;
 };
 
 // Composant pour chaque question avec drag and drop
-const SortableQuestion = ({ question, onDelete }: SortableQuestionProps) => {
+const SortableQuestion = ({ question, onDelete, onEdit }: SortableQuestionProps) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: question.id });
   
   const style = {
@@ -136,9 +145,14 @@ const SortableQuestion = ({ question, onDelete }: SortableQuestionProps) => {
             </CardTitle>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex space-x-1">
+          <Button variant="ghost" size="icon" onClick={() => onEdit(question.id)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="px-4 py-2">
         {renderPreview()}
@@ -157,7 +171,7 @@ const SortableQuestion = ({ question, onDelete }: SortableQuestionProps) => {
 };
 
 export function DragDropFormBuilder() {
-  const { grids, addGrid, updateGrid, addQuestionToGrid, deleteQuestion } = useGridStore();
+  const { grids, addGrid, updateGrid, addQuestionToGrid, deleteQuestion, updateQuestion } = useGridStore();
   const { toast } = useToast();
   
   const [selectedGridId, setSelectedGridId] = useState<number | null>(grids[0]?.id || null);
@@ -165,12 +179,14 @@ export function DragDropFormBuilder() {
   const [showCreateGrid, setShowCreateGrid] = useState(false);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<number | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Form state for creating a new grid
   const [gridName, setGridName] = useState('');
   const [gridDescription, setGridDescription] = useState('');
   
-  // Form state for creating a new question
+  // Form state for creating/editing a question
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<QuestionType>('text');
   const [options, setOptions] = useState<{ label: string; value: number }[]>([
@@ -254,7 +270,44 @@ export function DragDropFormBuilder() {
     setShowCreateGrid(false);
   };
 
-  const handleAddQuestion = () => {
+  const resetQuestionForm = () => {
+    setQuestionText('');
+    setQuestionType('text');
+    setOptions([{ label: '', value: 0 }]);
+    setMinValue(0);
+    setMaxValue(10);
+    setRequired(true);
+    setIsEditMode(false);
+    setEditingQuestionId(null);
+  };
+
+  const handleEditQuestion = (questionId: number) => {
+    if (!selectedGridId) return;
+    
+    const question = selectedGrid?.questions.find(q => q.id === questionId);
+    if (!question) return;
+    
+    setQuestionText(question.text);
+    setQuestionType(question.type);
+    setRequired(question.required);
+    
+    if (['select', 'radio', 'checkbox'].includes(question.type) && question.options) {
+      setOptions([...question.options]);
+    } else {
+      setOptions([{ label: '', value: 0 }]);
+    }
+    
+    if (question.type === 'slider') {
+      setMinValue(question.minValue || 0);
+      setMaxValue(question.maxValue || 10);
+    }
+    
+    setIsEditMode(true);
+    setEditingQuestionId(questionId);
+    setShowAddQuestion(true);
+  };
+
+  const handleSaveQuestion = () => {
     if (!selectedGridId) {
       toast({
         variant: "destructive",
@@ -286,23 +339,33 @@ export function DragDropFormBuilder() {
       questionOptions = options;
     }
 
-    const newQuestion: Omit<Question, 'id'> = {
+    const questionData = {
       text: questionText,
       type: questionType,
       required,
-      ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: idx + 1 })) }),
+      ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: opt.id || idx + 1 })) }),
       ...(questionType === 'slider' && { minValue, maxValue })
     };
 
-    addQuestionToGrid(selectedGridId, newQuestion);
-    
-    toast({
-      title: "Question ajoutée",
-      description: "La question a été ajoutée à la grille"
-    });
+    if (isEditMode && editingQuestionId !== null) {
+      // Mode édition - mettre à jour une question existante
+      updateQuestion(selectedGridId, editingQuestionId, questionData);
+      
+      toast({
+        title: "Question mise à jour",
+        description: "La question a été modifiée avec succès"
+      });
+    } else {
+      // Mode création - ajouter une nouvelle question
+      addQuestionToGrid(selectedGridId, questionData);
+      
+      toast({
+        title: "Question ajoutée",
+        description: "La question a été ajoutée à la grille"
+      });
+    }
 
-    setQuestionText('');
-    setOptions([{ label: '', value: 0 }]);
+    resetQuestionForm();
     setShowAddQuestion(false);
   };
 
@@ -321,6 +384,11 @@ export function DragDropFormBuilder() {
       setDeleteAlertOpen(false);
       setQuestionToDelete(null);
     }
+  };
+
+  const handleCancelQuestionForm = () => {
+    resetQuestionForm();
+    setShowAddQuestion(false);
   };
 
   return (
@@ -348,7 +416,10 @@ export function DragDropFormBuilder() {
             <PlusCircle className="h-4 w-4 mr-2" />
             Nouvelle grille
           </Button>
-          <Button onClick={() => setShowAddQuestion(true)}>
+          <Button onClick={() => {
+            resetQuestionForm();
+            setShowAddQuestion(true);
+          }}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Ajouter une question
           </Button>
@@ -383,6 +454,7 @@ export function DragDropFormBuilder() {
                       key={question.id} 
                       question={question} 
                       onDelete={handleDeleteButtonClick}
+                      onEdit={handleEditQuestion}
                     />
                   ))
                 ) : (
@@ -442,116 +514,118 @@ export function DragDropFormBuilder() {
         </div>
       )}
       
-      {/* Dialog pour l'ajout de question */}
-      {showAddQuestion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>Ajouter une question</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="questionText">Question</Label>
-                <Input 
-                  id="questionText" 
-                  value={questionText} 
-                  onChange={(e) => setQuestionText(e.target.value)}
-                  placeholder="Texte de la question" 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="questionType">Type de question</Label>
-                <Select value={questionType} onValueChange={(value) => setQuestionType(value as QuestionType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Type de question" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Texte</SelectItem>
-                    <SelectItem value="select">Liste déroulante</SelectItem>
-                    <SelectItem value="radio">Boutons radio</SelectItem>
-                    <SelectItem value="checkbox">Cases à cocher</SelectItem>
-                    <SelectItem value="slider">Curseur</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {['select', 'radio', 'checkbox'].includes(questionType) && (
-                <div className="space-y-3">
-                  <Label>Options</Label>
-                  {options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input 
-                        value={option.label} 
-                        onChange={(e) => handleOptionChange(index, 'label', e.target.value)}
-                        placeholder="Libellé" 
-                        className="flex-grow"
-                      />
-                      <Input 
-                        type="number"
-                        value={option.value} 
-                        onChange={(e) => handleOptionChange(index, 'value', e.target.value)}
-                        placeholder="Valeur" 
-                        className="w-24"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => handleRemoveOption(index)}
-                        disabled={options.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" onClick={handleAddOption} className="w-full">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Ajouter une option
-                  </Button>
-                </div>
-              )}
-              
-              {questionType === 'slider' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="minValue">Valeur minimale</Label>
+      {/* Dialog pour l'ajout/édition de question */}
+      <Dialog open={showAddQuestion} onOpenChange={setShowAddQuestion}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditMode ? "Modifier la question" : "Ajouter une question"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="questionText">Question</Label>
+              <Input 
+                id="questionText" 
+                value={questionText} 
+                onChange={(e) => setQuestionText(e.target.value)}
+                placeholder="Texte de la question" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="questionType">Type de question</Label>
+              <Select value={questionType} onValueChange={(value) => setQuestionType(value as QuestionType)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de question" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Texte</SelectItem>
+                  <SelectItem value="select">Liste déroulante</SelectItem>
+                  <SelectItem value="radio">Boutons radio</SelectItem>
+                  <SelectItem value="checkbox">Cases à cocher</SelectItem>
+                  <SelectItem value="slider">Curseur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {['select', 'radio', 'checkbox'].includes(questionType) && (
+              <div className="space-y-3">
+                <Label>Options</Label>
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
                     <Input 
-                      id="minValue"
+                      value={option.label} 
+                      onChange={(e) => handleOptionChange(index, 'label', e.target.value)}
+                      placeholder="Libellé" 
+                      className="flex-grow"
+                    />
+                    <Input 
                       type="number"
-                      value={minValue} 
-                      onChange={(e) => setMinValue(Number(e.target.value))}
+                      value={option.value} 
+                      onChange={(e) => handleOptionChange(index, 'value', e.target.value)}
+                      placeholder="Valeur" 
                       className="w-24"
                     />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleRemoveOption(index)}
+                      disabled={options.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="maxValue">Valeur maximale</Label>
-                    <Input 
-                      id="maxValue"
-                      type="number"
-                      value={maxValue} 
-                      onChange={(e) => setMaxValue(Number(e.target.value))}
-                      className="w-24"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="required" 
-                  checked={required} 
-                  onCheckedChange={(checked) => setRequired(!!checked)} 
-                />
-                <Label htmlFor="required">Question obligatoire</Label>
+                ))}
+                <Button variant="outline" onClick={handleAddOption} className="w-full">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Ajouter une option
+                </Button>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowAddQuestion(false)}>Annuler</Button>
-              <Button onClick={handleAddQuestion}>Ajouter</Button>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
+            )}
+            
+            {questionType === 'slider' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="minValue">Valeur minimale</Label>
+                  <Input 
+                    id="minValue"
+                    type="number"
+                    value={minValue} 
+                    onChange={(e) => setMinValue(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="maxValue">Valeur maximale</Label>
+                  <Input 
+                    id="maxValue"
+                    type="number"
+                    value={maxValue} 
+                    onChange={(e) => setMaxValue(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="required" 
+                checked={required} 
+                onCheckedChange={(checked) => setRequired(!!checked)} 
+              />
+              <Label htmlFor="required">Question obligatoire</Label>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleCancelQuestionForm}>Annuler</Button>
+            <Button onClick={handleSaveQuestion}>
+              {isEditMode ? "Mettre à jour" : "Ajouter"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Alert de confirmation de suppression */}
       <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>

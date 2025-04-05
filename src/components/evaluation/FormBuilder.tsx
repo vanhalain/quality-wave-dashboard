@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { PlusCircle, Trash2, Grid as GridIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Grid as GridIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface FormBuilderProps {
   selectedGridId?: number | null;
@@ -31,20 +32,23 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
   
   const initialSelectedGridId = propSelectedGridId || (gridId ? parseInt(gridId) : null) || null;
   
-  const { grids, addGrid, addQuestionToGrid, deleteQuestion } = useGridStore();
+  const { grids, addGrid, addQuestionToGrid, updateQuestion, deleteQuestion } = useGridStore();
   const { toast } = useToast();
   
   const [gridName, setGridName] = useState('');
   const [gridDescription, setGridDescription] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<QuestionType>('text');
-  const [options, setOptions] = useState<{ label: string; value: number }[]>([
+  const [options, setOptions] = useState<{ label: string; value: number; id?: number }[]>([
     { label: '', value: 0 }
   ]);
   const [minValue, setMinValue] = useState<number>(0);
   const [maxValue, setMaxValue] = useState<number>(10);
   const [required, setRequired] = useState(true);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(initialSelectedGridId);
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleAddOption = () => {
     setOptions([...options, { label: '', value: 0 }]);
@@ -92,7 +96,46 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
     setGridDescription('');
   };
 
-  const handleAddQuestion = () => {
+  const resetQuestionForm = () => {
+    setQuestionText('');
+    setQuestionType('text');
+    setOptions([{ label: '', value: 0 }]);
+    setMinValue(0);
+    setMaxValue(10);
+    setRequired(true);
+    setIsEditMode(false);
+    setEditingQuestionId(null);
+    setIsEditDialogOpen(false);
+  };
+
+  const handleEditQuestion = (questionId: number) => {
+    if (!selectedGridId) return;
+    
+    const selectedGrid = grids.find(grid => grid.id === selectedGridId);
+    const question = selectedGrid?.questions.find(q => q.id === questionId);
+    if (!question) return;
+    
+    setQuestionText(question.text);
+    setQuestionType(question.type);
+    setRequired(question.required);
+    
+    if (['select', 'radio', 'checkbox'].includes(question.type) && question.options) {
+      setOptions([...question.options]);
+    } else {
+      setOptions([{ label: '', value: 0 }]);
+    }
+    
+    if (question.type === 'slider') {
+      setMinValue(question.minValue || 0);
+      setMaxValue(question.maxValue || 10);
+    }
+    
+    setIsEditMode(true);
+    setEditingQuestionId(questionId);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveQuestion = () => {
     if (!selectedGridId) {
       toast({
         variant: "destructive",
@@ -124,23 +167,33 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
       questionOptions = options;
     }
 
-    const newQuestion: Omit<Question, 'id'> = {
+    const questionData = {
       text: questionText,
       type: questionType,
       required,
-      ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: idx + 1 })) }),
+      ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: opt.id || idx + 1 })) }),
       ...(questionType === 'slider' && { minValue, maxValue })
     };
 
-    addQuestionToGrid(selectedGridId, newQuestion);
-    
-    toast({
-      title: "Question ajoutée",
-      description: "La question a été ajoutée à la grille"
-    });
+    if (isEditMode && editingQuestionId !== null) {
+      // Mode édition - mettre à jour une question existante
+      updateQuestion(selectedGridId, editingQuestionId, questionData);
+      
+      toast({
+        title: "Question mise à jour",
+        description: "La question a été modifiée avec succès"
+      });
+    } else {
+      // Mode création - ajouter une nouvelle question
+      addQuestionToGrid(selectedGridId, questionData);
+      
+      toast({
+        title: "Question ajoutée",
+        description: "La question a été ajoutée à la grille"
+      });
+    }
 
-    setQuestionText('');
-    setOptions([{ label: '', value: 0 }]);
+    resetQuestionForm();
   };
 
   const handleDeleteQuestion = (gridId: number, questionId: number) => {
@@ -316,7 +369,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
               <Label htmlFor="required">Question obligatoire</Label>
             </div>
             
-            <Button onClick={handleAddQuestion}>Ajouter la question</Button>
+            <Button onClick={handleSaveQuestion}>{isEditMode ? "Mettre à jour" : "Ajouter"} la question</Button>
           </CardContent>
         </Card>
       </div>
@@ -401,14 +454,22 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                         </div>
                       )}
                       
-                      <div className="flex justify-end">
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditQuestion(question.id)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier
+                        </Button>
                         <Button 
                           variant="destructive" 
                           size="sm" 
                           onClick={() => handleDeleteQuestion(selectedGrid.id, question.id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer la question
+                          Supprimer
                         </Button>
                       </div>
                     </div>
@@ -425,6 +486,115 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog pour l'édition de question */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Modifier la question</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editQuestionText">Question</Label>
+              <Input 
+                id="editQuestionText" 
+                value={questionText} 
+                onChange={(e) => setQuestionText(e.target.value)}
+                placeholder="Texte de la question" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="editQuestionType">Type de question</Label>
+              <Select value={questionType} onValueChange={(value) => setQuestionType(value as QuestionType)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de question" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Texte</SelectItem>
+                  <SelectItem value="select">Liste déroulante</SelectItem>
+                  <SelectItem value="radio">Boutons radio</SelectItem>
+                  <SelectItem value="checkbox">Cases à cocher</SelectItem>
+                  <SelectItem value="slider">Curseur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {['select', 'radio', 'checkbox'].includes(questionType) && (
+              <div className="space-y-3">
+                <Label>Options</Label>
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input 
+                      value={option.label} 
+                      onChange={(e) => handleOptionChange(index, 'label', e.target.value)}
+                      placeholder="Libellé" 
+                      className="flex-grow"
+                    />
+                    <Input 
+                      type="number"
+                      value={option.value} 
+                      onChange={(e) => handleOptionChange(index, 'value', e.target.value)}
+                      placeholder="Valeur" 
+                      className="w-24"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleRemoveOption(index)}
+                      disabled={options.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" onClick={handleAddOption} className="w-full">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Ajouter une option
+                </Button>
+              </div>
+            )}
+            
+            {questionType === 'slider' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="editMinValue">Valeur minimale</Label>
+                  <Input 
+                    id="editMinValue"
+                    type="number"
+                    value={minValue} 
+                    onChange={(e) => setMinValue(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="editMaxValue">Valeur maximale</Label>
+                  <Input 
+                    id="editMaxValue"
+                    type="number"
+                    value={maxValue} 
+                    onChange={(e) => setMaxValue(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="editRequired" 
+                checked={required} 
+                onCheckedChange={(checked) => setRequired(!!checked)} 
+              />
+              <Label htmlFor="editRequired">Question obligatoire</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetQuestionForm}>Annuler</Button>
+            <Button onClick={handleSaveQuestion}>Mettre à jour</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
