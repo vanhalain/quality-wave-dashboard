@@ -2,6 +2,7 @@
 import { Bell, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLanguage } from '@/lib/language-context';
 
 interface TopBarProps {
   toggleSidebar: () => void;
@@ -9,6 +10,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ toggleSidebar, sidebarCollapsed }: TopBarProps) {
+  const { t } = useLanguage();
+  
   return (
     <div className="h-16 bg-white border-b flex items-center justify-between px-4">
       <div className="flex items-center">
@@ -19,7 +22,7 @@ export function TopBar({ toggleSidebar, sidebarCollapsed }: TopBarProps) {
           <Search className="h-4 w-4 text-muted-foreground mr-2" />
           <Input 
             type="search" 
-            placeholder="Search..." 
+            placeholder={`${t('Search')}...`} 
             className="h-9 md:w-64 bg-muted/30 border-0 focus-visible:ring-0" 
           />
         </div>

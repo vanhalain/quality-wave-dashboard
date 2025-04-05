@@ -12,6 +12,7 @@ import {
   navigationMenuTriggerStyle
 } from '@/components/ui/navigation-menu';
 import React from 'react';
+import { useLanguage } from '@/lib/language-context';
 
 interface SidebarNavProps {
   collapsed: boolean;
@@ -19,47 +20,48 @@ interface SidebarNavProps {
 
 export function SidebarNav({ collapsed }: SidebarNavProps) {
   const location = useLocation();
+  const { t } = useLanguage();
   
   const navItems = [
     {
-      name: 'Dashboard',
+      name: t('Dashboard'),
       href: '/',
       icon: Home,
     },
     {
-      name: 'Campaigns',
+      name: t('Campaigns'),
       href: '/campaigns',
       icon: FileText,
     },
     {
-      name: 'Evaluations',
+      name: t('Evaluations'),
       href: '/evaluations',
       icon: BarChart3,
     },
     {
-      name: 'Grilles',
+      name: t('Grids'),
       href: '/grids',
       icon: Grid,
       submenu: [
         {
-          name: 'Liste des grilles',
+          name: t('List of grids'),
           href: '/grids',
           icon: Grid,
         },
         {
-          name: 'Créateur de grille',
+          name: t('Grid Creator'),
           href: '/grids/editor',
           icon: PenSquare,
         },
       ],
     },
     {
-      name: 'Users',
+      name: t('Users'),
       href: '/users',
       icon: Users,
     },
     {
-      name: 'Settings',
+      name: t('Settings'),
       href: '/settings',
       icon: Settings,
     },
@@ -143,7 +145,7 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
           {!collapsed && (
             <div className="ml-3">
               <p className="text-sm font-medium text-sidebar-foreground">User Name</p>
-              <p className="text-xs text-sidebar-foreground/70">Administrator</p>
+              <p className="text-xs text-sidebar-foreground/70">{t('Administrator')}</p>
             </div>
           )}
         </div>
