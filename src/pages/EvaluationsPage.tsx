@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/lib/campaigns';
 import { useGridStore } from '@/lib/evaluation-grids';
-import { GridCheck } from 'lucide-react';
+import { Grid2x2, CheckCircle } from 'lucide-react';
 
 export default function EvaluationsPage() {
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ export default function EvaluationsPage() {
               </div>
               {campaignWithGrid && selectedGrid && (
                 <div className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs">
-                  <GridCheck className="w-4 h-4 mr-1" />
+                  <Grid2x2 className="w-4 h-4 mr-1" />
                   Grille: {selectedGrid.name}
                 </div>
               )}
@@ -105,7 +105,7 @@ export default function EvaluationsPage() {
                   <FormBuilder selectedGridId={selectedGrid.id} />
                 ) : (
                   <div className="text-center p-6 border rounded-lg bg-muted/20">
-                    <GridCheck className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                    <CheckCircle className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
                     <h3 className="text-lg font-medium mb-2">Aucune grille sélectionnée</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       Veuillez sélectionner une grille d'évaluation pour cette campagne
