@@ -21,7 +21,8 @@ export default function GridsPage() {
   };
 
   const handleViewGrid = (grid: Grid) => {
-    navigate(`/grids/${grid.id}`);
+    // Rediriger vers l'éditeur en mode lecture seule au lieu de "/grids/{id}"
+    navigate(`/grids/editor/${grid.id}?view=true`);
   };
 
   const handleDeleteGrid = (grid: Grid) => {
