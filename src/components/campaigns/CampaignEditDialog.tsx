@@ -129,16 +129,16 @@ export function CampaignEditDialog({ open, onClose, onSave, campaign, mode }: Ca
                 Grille
               </Label>
               <Select 
-                value={formData.gridId?.toString() || ''} 
+                value={formData.gridId?.toString() || "null"} 
                 onValueChange={(value) => 
-                  setFormData({ ...formData, gridId: value ? parseInt(value) : null })
+                  setFormData({ ...formData, gridId: value === "null" ? null : parseInt(value) })
                 }
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Sélectionner une grille" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value="null">Aucune</SelectItem>
                   {grids.map(grid => (
                     <SelectItem key={grid.id} value={grid.id.toString()}>
                       {grid.name}
