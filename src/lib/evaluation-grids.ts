@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type QuestionType = 'text' | 'select' | 'radio' | 'checkbox' | 'slider';
+export type QuestionType = 'text' | 'select' | 'radio' | 'checkbox' | 'slider' | 'toggle' | 'rating';
 
 export interface QuestionOption {
   id: number;

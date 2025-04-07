@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, GripVertical, FileText, ListChecks, Check, X, Edit } from 'lucide-react';
+import { PlusCircle, Trash2, GripVertical, FileText, ListChecks, Check, X, Edit, Star, ToggleLeft } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -35,6 +35,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +60,16 @@ type SortableQuestionProps = {
   question: Question;
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
+};
+
+// Helper pour générer les étoiles pour l'aperçu
+const renderStars = (count: number, selectedCount: number) => {
+  return Array.from({ length: count }).map((_, i) => (
+    <Star 
+      key={i}
+      className={`h-4 w-4 ${i < selectedCount ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+    />
+  ));
 };
 
 // Composant pour chaque question avec drag and drop
@@ -111,6 +123,19 @@ const SortableQuestion = ({ question, onDelete, onEdit }: SortableQuestionProps)
             <Slider disabled defaultValue={[5]} min={0} max={10} step={1} />
           </div>
         );
+      case 'toggle':
+        return (
+          <div className="flex items-center space-x-2 pt-2">
+            <Switch id="toggle-preview" disabled />
+            <Label htmlFor="toggle-preview">Oui/Non</Label>
+          </div>
+        );
+      case 'rating':
+        return (
+          <div className="flex items-center space-x-1 pt-2">
+            {renderStars(question.maxValue || 5, 3)}
+          </div>
+        );
     }
   };
   
@@ -126,6 +151,10 @@ const SortableQuestion = ({ question, onDelete, onEdit }: SortableQuestionProps)
         return <Check className="h-4 w-4" />;
       case 'slider':
         return <div className="h-4 w-4">──</div>;
+      case 'toggle':
+        return <ToggleLeft className="h-4 w-4" />;
+      case 'rating':
+        return <Star className="h-4 w-4" />;
     }
   };
   
@@ -189,11 +218,12 @@ export function DragDropFormBuilder() {
   // Form state for creating/editing a question
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<QuestionType>('text');
-  const [options, setOptions] = useState<{ label: string; value: number }[]>([
+  const [options, setOptions] = useState<{ label: string; value: number; id?: number }[]>([
     { label: '', value: 0 }
   ]);
   const [minValue, setMinValue] = useState<number>(0);
   const [maxValue, setMaxValue] = useState<number>(10);
+  const [ratingMax, setRatingMax] = useState<number>(5);
   const [required, setRequired] = useState(true);
   
   // Configurez les capteurs pour les interactions de drag & drop
@@ -276,6 +306,7 @@ export function DragDropFormBuilder() {
     setOptions([{ label: '', value: 0 }]);
     setMinValue(0);
     setMaxValue(10);
+    setRatingMax(5);
     setRequired(true);
     setIsEditMode(false);
     setEditingQuestionId(null);
@@ -293,6 +324,8 @@ export function DragDropFormBuilder() {
     
     if (['select', 'radio', 'checkbox'].includes(question.type) && question.options) {
       setOptions([...question.options]);
+    } else if (question.type === 'rating' && question.maxValue) {
+      setRatingMax(question.maxValue);
     } else {
       setOptions([{ label: '', value: 0 }]);
     }
@@ -344,7 +377,14 @@ export function DragDropFormBuilder() {
       type: questionType,
       required,
       ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: opt.id || idx + 1 })) }),
-      ...(questionType === 'slider' && { minValue, maxValue })
+      ...(questionType === 'slider' && { minValue, maxValue }),
+      ...(questionType === 'rating' && { minValue: 0, maxValue: ratingMax }),
+      ...(questionType === 'toggle' && { 
+        options: [
+          { id: 1, label: 'Non', value: 0 },
+          { id: 2, label: 'Oui', value: 1 }
+        ]
+      })
     };
 
     if (isEditMode && editingQuestionId !== null) {
@@ -545,6 +585,8 @@ export function DragDropFormBuilder() {
                   <SelectItem value="radio">Boutons radio</SelectItem>
                   <SelectItem value="checkbox">Cases à cocher</SelectItem>
                   <SelectItem value="slider">Curseur</SelectItem>
+                  <SelectItem value="toggle">Interrupteur Oui/Non</SelectItem>
+                  <SelectItem value="rating">Notation par étoiles</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -605,6 +647,30 @@ export function DragDropFormBuilder() {
                     onChange={(e) => setMaxValue(Number(e.target.value))}
                     className="w-24"
                   />
+                </div>
+              </div>
+            )}
+            
+            {questionType === 'rating' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ratingMax">Nombre d'étoiles</Label>
+                  <Select 
+                    value={ratingMax.toString()} 
+                    onValueChange={(value) => setRatingMax(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue placeholder="Nombre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-1 pt-2">
+                  {renderStars(ratingMax, Math.ceil(ratingMax / 2))}
                 </div>
               </div>
             )}

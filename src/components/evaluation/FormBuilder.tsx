@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { PlusCircle, Trash2, Edit, Grid as GridIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Grid as GridIcon, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +21,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface FormBuilderProps {
   selectedGridId?: number | null;
@@ -49,6 +51,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [ratingMax, setRatingMax] = useState<number>(5);
 
   const handleAddOption = () => {
     setOptions([...options, { label: '', value: 0 }]);
@@ -102,6 +105,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
     setOptions([{ label: '', value: 0 }]);
     setMinValue(0);
     setMaxValue(10);
+    setRatingMax(5);
     setRequired(true);
     setIsEditMode(false);
     setEditingQuestionId(null);
@@ -121,6 +125,8 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
     
     if (['select', 'radio', 'checkbox'].includes(question.type) && question.options) {
       setOptions([...question.options]);
+    } else if (question.type === 'rating' && question.maxValue) {
+      setRatingMax(question.maxValue);
     } else {
       setOptions([{ label: '', value: 0 }]);
     }
@@ -172,7 +178,14 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
       type: questionType,
       required,
       ...(questionOptions && { options: questionOptions.map((opt, idx) => ({ ...opt, id: opt.id || idx + 1 })) }),
-      ...(questionType === 'slider' && { minValue, maxValue })
+      ...(questionType === 'slider' && { minValue, maxValue }),
+      ...(questionType === 'rating' && { minValue: 0, maxValue: ratingMax }),
+      ...(questionType === 'toggle' && { 
+        options: [
+          { id: 1, label: 'Non', value: 0 },
+          { id: 2, label: 'Oui', value: 1 }
+        ]
+      })
     };
 
     if (isEditMode && editingQuestionId !== null) {
@@ -209,6 +222,16 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
   };
 
   const selectedGrid = grids.find(grid => grid.id === selectedGridId);
+
+  // Helper pour générer les étoiles pour l'aperçu
+  const renderStars = (count: number, selectedCount: number) => {
+    return Array.from({ length: count }).map((_, i) => (
+      <Star 
+        key={i}
+        className={`h-5 w-5 ${i < selectedCount ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+      />
+    ));
+  };
 
   return (
     <div className="space-y-8">
@@ -296,6 +319,8 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                   <SelectItem value="radio">Boutons radio</SelectItem>
                   <SelectItem value="checkbox">Cases à cocher</SelectItem>
                   <SelectItem value="slider">Curseur</SelectItem>
+                  <SelectItem value="toggle">Interrupteur Oui/Non</SelectItem>
+                  <SelectItem value="rating">Notation par étoiles</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -356,6 +381,30 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                     onChange={(e) => setMaxValue(Number(e.target.value))}
                     className="w-24"
                   />
+                </div>
+              </div>
+            )}
+            
+            {questionType === 'rating' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ratingMax">Nombre d'étoiles</Label>
+                  <Select 
+                    value={ratingMax.toString()} 
+                    onValueChange={(value) => setRatingMax(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue placeholder="Nombre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-1 pt-2">
+                  {renderStars(ratingMax, Math.ceil(ratingMax / 2))}
                 </div>
               </div>
             )}
@@ -454,6 +503,24 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                         </div>
                       )}
                       
+                      {question.type === 'toggle' && (
+                        <div className="flex items-center space-x-2">
+                          <Switch id="toggle-preview" />
+                          <Label htmlFor="toggle-preview">Oui/Non</Label>
+                        </div>
+                      )}
+                      
+                      {question.type === 'rating' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-1">
+                            {renderStars(question.maxValue || 5, 0)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Cliquez sur une étoile pour noter
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-end space-x-2">
                         <Button 
                           variant="outline" 
@@ -516,6 +583,8 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                   <SelectItem value="radio">Boutons radio</SelectItem>
                   <SelectItem value="checkbox">Cases à cocher</SelectItem>
                   <SelectItem value="slider">Curseur</SelectItem>
+                  <SelectItem value="toggle">Interrupteur Oui/Non</SelectItem>
+                  <SelectItem value="rating">Notation par étoiles</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -576,6 +645,30 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                     onChange={(e) => setMaxValue(Number(e.target.value))}
                     className="w-24"
                   />
+                </div>
+              </div>
+            )}
+            
+            {questionType === 'rating' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="editRatingMax">Nombre d'étoiles</Label>
+                  <Select 
+                    value={ratingMax.toString()} 
+                    onValueChange={(value) => setRatingMax(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue placeholder="Nombre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-1 pt-2">
+                  {renderStars(ratingMax, Math.ceil(ratingMax / 2))}
                 </div>
               </div>
             )}
