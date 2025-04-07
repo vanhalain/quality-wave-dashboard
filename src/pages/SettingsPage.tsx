@@ -23,6 +23,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
+import { Key, RotateCcw } from 'lucide-react';
+import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
 
 export default function SettingsPage() {
   const { user, changeUserRole } = useAuth();
@@ -52,6 +54,9 @@ export default function SettingsPage() {
     },
   ]);
 
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [selectedUserEmail, setSelectedUserEmail] = useState('');
+
   const handleRoleChange = async (userId: number, newRole: UserRole) => {
     if (user?.role !== 'admin') {
       toast({
@@ -80,6 +85,20 @@ export default function SettingsPage() {
         description: result.message || t('Failed to update user role.'),
       });
     }
+  };
+
+  const handleResetPassword = (userEmail: string) => {
+    if (user?.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: t('Permission Denied'),
+        description: t('Only administrators can reset user passwords.'),
+      });
+      return;
+    }
+    
+    setSelectedUserEmail(userEmail);
+    setIsResetPasswordDialogOpen(true);
   };
 
   const isDisabled = user?.role !== 'admin';
@@ -144,9 +163,17 @@ export default function SettingsPage() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" disabled={isDisabled}>
-                          {t('Edit')}
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={isDisabled}
+                            onClick={() => handleResetPassword(user.email)}
+                          >
+                            <Key className="h-3 w-3 mr-2" />
+                            {t('Reset Password')}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -201,6 +228,12 @@ export default function SettingsPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <ResetPasswordDialog 
+        open={isResetPasswordDialogOpen}
+        onClose={() => setIsResetPasswordDialogOpen(false)}
+        userEmail={selectedUserEmail}
+      />
     </DashboardLayout>
   );
 }

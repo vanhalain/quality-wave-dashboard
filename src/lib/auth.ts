@@ -22,6 +22,7 @@ interface AuthState {
   updateUserProfile: (updates: Partial<User>) => Promise<{ success: boolean; message?: string }>;
   setUser: (user: User | null) => void;
   changeUserRole: (userId: number, newRole: UserRole) => Promise<{ success: boolean; message?: string }>;
+  resetUserPassword: (email: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 // Mock users data for demonstration
@@ -111,6 +112,26 @@ export const useAuth = create<AuthState>()(
           return { success: true, message: 'Role updated successfully' };
         }
         return { success: false, message: 'User not found' };
+      },
+      resetUserPassword: async (email) => {
+        // In a real application, this would be an API call to reset a user's password
+        // For now, we'll just simulate success for any email that exists in our mock data
+        const userExists = mockUsers.some(u => u.email === email);
+        
+        if (userExists) {
+          // In a real application with Supabase, you would use something like:
+          // await supabase.auth.resetPasswordForEmail(email);
+          
+          return { 
+            success: true, 
+            message: 'Password reset email sent successfully' 
+          };
+        }
+        
+        return { 
+          success: false, 
+          message: 'User with this email not found' 
+        };
       },
     }),
     {

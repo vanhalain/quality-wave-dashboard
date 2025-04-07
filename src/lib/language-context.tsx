@@ -1,15 +1,14 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Define the available languages
-export type Language = 'fr' | 'en';
+export type Language = 'en' | 'fr';
 
 // Create a context to store the language state
-type LanguageContextType = {
+interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
-};
+}
 
 const defaultValue: LanguageContextType = {
   language: 'fr',
@@ -20,7 +19,93 @@ const defaultValue: LanguageContextType = {
 const LanguageContext = createContext<LanguageContextType>(defaultValue);
 
 // Translation dictionary
-const translations: Record<Language, Record<string, string>> = {
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    // Dashboard
+    'Dashboard': 'Dashboard',
+    'Campaigns': 'Campaigns',
+    'Evaluations': 'Evaluations',
+    'Grids': 'Grids',
+    'Users': 'Users',
+    'Settings': 'Settings',
+    'Search': 'Search',
+    // Grid pages
+    'Evaluation Grids': 'Evaluation Grids',
+    'Create Grid': 'Create Grid',
+    'View': 'View',
+    'questions': 'questions',
+    'Last modified': 'Last modified',
+    'No grids': 'No grids',
+    'Start by creating your first evaluation grid.': 'Start by creating your first evaluation grid.',
+    'Are you sure?': 'Are you sure?',
+    'This action will permanently delete the grid': 'This action will permanently delete the grid',
+    'and all associated data.': 'and all associated data.',
+    'This action cannot be undone.': 'This action cannot be undone.',
+    'Cancel': 'Cancel',
+    'Delete': 'Delete',
+    'Grid deleted': 'Grid deleted',
+    'has been deleted.': 'has been deleted.',
+    // Evaluation page
+    'Conversation Transcript': 'Conversation Transcript',
+    'Review the agent-customer interaction': 'Review the agent-customer interaction',
+    'Quality Assessment': 'Quality Assessment',
+    'Evaluate the conversation based on criteria': 'Evaluate the conversation based on criteria',
+    'Grid': 'Grid',
+    'Evaluation': 'Evaluation',
+    'Results': 'Results',
+    'No grid selected': 'No grid selected',
+    'Please select an evaluation grid for this campaign': 'Please select an evaluation grid for this campaign',
+    'Configure campaign': 'Configure campaign',
+    'Results will be displayed after submission': 'Results will be displayed after submission',
+    'Submit Evaluation': 'Submit Evaluation',
+    'Submitted': 'Submitted',
+    // Settings
+    'Account Settings': 'Account Settings',
+    'Manage your account preferences': 'Manage your account preferences',
+    'Profile': 'Profile',
+    'Password': 'Password',
+    'Notifications': 'Notifications',
+    'Name': 'Name',
+    'Save Changes': 'Save Changes',
+    'Current Password': 'Current Password',
+    'New Password': 'New Password',
+    'Confirm New Password': 'Confirm New Password',
+    'Update Password': 'Update Password',
+    'Configure your notification preferences': 'Configure your notification preferences',
+    'Coming soon...': 'Coming soon...',
+    'Preferences': 'Preferences',
+    'Customize the appearance of your dashboard': 'Customize the appearance of your dashboard',
+    'Application Language': 'Application Language',
+    'Theme': 'Theme',
+    'Select language': 'Select language',
+    'Choose your preferred language for the application interface.': 'Choose your preferred language for the application interface.',
+    'Language changed': 'Language changed',
+    'Application language has been set to English.': 'Application language has been set to English.',
+    'Langue modifiée': 'Language changed',
+    'La langue de l\'application a été définie sur Français.': 'Application language has been set to French.',
+    'Profile updated': 'Profile updated',
+    'Your profile information has been updated successfully.': 'Your profile information has been updated successfully.',
+    'Password updated': 'Password updated',
+    'Your password has been updated successfully.': 'Your password has been updated successfully.',
+    'List of grids': 'List of grids',
+    'Grid Creator': 'Grid Creator',
+    'Administrator': 'Administrator',
+    'Reset Password': 'Reset Password',
+    'Reset User Password': 'Reset User Password',
+    'Send a password reset email to the user.': 'Send a password reset email to the user.',
+    'Email': 'Email',
+    'Cancel': 'Cancel',
+    'Send Reset Email': 'Send Reset Email',
+    'Sending...': 'Sending...',
+    'Password Reset Email Sent': 'Password Reset Email Sent',
+    'An email with password reset instructions has been sent to the user.': 'An email with password reset instructions has been sent to the user.',
+    'Failed to Send Reset Email': 'Failed to Send Reset Email',
+    'An error occurred while sending the password reset email.': 'An error occurred while sending the password reset email.',
+    'Error': 'Error',
+    'An unexpected error occurred.': 'An unexpected error occurred.',
+    'Permission Denied': 'Permission Denied',
+    'Only administrators can reset user passwords.': 'Only administrators can reset user passwords.',
+  },
   fr: {
     // Dashboard
     'Dashboard': 'Tableau de bord',
@@ -91,82 +176,29 @@ const translations: Record<Language, Record<string, string>> = {
     'List of grids': 'Liste des grilles',
     'Grid Creator': 'Créateur de grille',
     'Administrator': 'Administrateur',
-  },
-  en: {
-    // English translations have the same keys as values
-    // Dashboard
-    'Dashboard': 'Dashboard',
-    'Campaigns': 'Campaigns',
-    'Evaluations': 'Evaluations',
-    'Grids': 'Grids',
-    'Users': 'Users',
-    'Settings': 'Settings',
-    'Search': 'Search',
-    // Grid pages
-    'Evaluation Grids': 'Evaluation Grids',
-    'Create Grid': 'Create Grid',
-    'View': 'View',
-    'questions': 'questions',
-    'Last modified': 'Last modified',
-    'No grids': 'No grids',
-    'Start by creating your first evaluation grid.': 'Start by creating your first evaluation grid.',
-    'Are you sure?': 'Are you sure?',
-    'This action will permanently delete the grid': 'This action will permanently delete the grid',
-    'and all associated data.': 'and all associated data.',
-    'This action cannot be undone.': 'This action cannot be undone.',
-    'Cancel': 'Cancel',
-    'Delete': 'Delete',
-    'Grid deleted': 'Grid deleted',
-    'has been deleted.': 'has been deleted.',
-    // Evaluation page
-    'Conversation Transcript': 'Conversation Transcript',
-    'Review the agent-customer interaction': 'Review the agent-customer interaction',
-    'Quality Assessment': 'Quality Assessment',
-    'Evaluate the conversation based on criteria': 'Evaluate the conversation based on criteria',
-    'Grid': 'Grid',
-    'Evaluation': 'Evaluation',
-    'Results': 'Results',
-    'No grid selected': 'No grid selected',
-    'Please select an evaluation grid for this campaign': 'Please select an evaluation grid for this campaign',
-    'Configure campaign': 'Configure campaign',
-    'Results will be displayed after submission': 'Results will be displayed after submission',
-    'Submit Evaluation': 'Submit Evaluation',
-    'Submitted': 'Submitted',
-    // Settings
-    'Account Settings': 'Account Settings',
-    'Manage your account preferences': 'Manage your account preferences',
-    'Profile': 'Profile',
-    'Password': 'Password',
-    'Notifications': 'Notifications',
-    'Name': 'Name',
-    'Save Changes': 'Save Changes',
-    'Current Password': 'Current Password',
-    'New Password': 'New Password',
-    'Confirm New Password': 'Confirm New Password',
-    'Update Password': 'Update Password',
-    'Configure your notification preferences': 'Configure your notification preferences',
-    'Coming soon...': 'Coming soon...',
-    'Preferences': 'Preferences',
-    'Customize the appearance of your dashboard': 'Customize the appearance of your dashboard',
-    'Application Language': 'Application Language',
-    'Theme': 'Theme',
-    'Select language': 'Select language',
-    'Choose your preferred language for the application interface.': 'Choose your preferred language for the application interface.',
-    'Language changed': 'Language changed',
-    'Application language has been set to English.': 'Application language has been set to English.',
-    'Langue modifiée': 'Language changed',
-    'La langue de l\'application a été définie sur Français.': 'Application language has been set to French.',
-    'Profile updated': 'Profile updated',
-    'Your profile information has been updated successfully.': 'Your profile information has been updated successfully.',
-    'Password updated': 'Password updated',
-    'Your password has been updated successfully.': 'Your password has been updated successfully.',
-    'List of grids': 'List of grids',
-    'Grid Creator': 'Grid Creator',
-    'Administrator': 'Administrator',
+    'Reset Password': 'Réinitialiser le mot de passe',
+    'Reset User Password': 'Réinitialiser le mot de passe',
+    'Send a password reset email to the user.': 'Envoyer un e-mail de réinitialisation du mot de passe à l\'utilisateur.',
+    'Email': 'E-mail',
+    'Cancel': 'Annuler',
+    'Send Reset Email': 'Envoyer l\'e-mail de réinitialisation',
+    'Sending...': 'Envoi en cours...',
+    'Password Reset Email Sent': 'E-mail de réinitialisation envoyé',
+    'An email with password reset instructions has been sent to the user.': 'Un e-mail avec des instructions de réinitialisation du mot de passe a été envoyé à l\'utilisateur.',
+    'Failed to Send Reset Email': 'Échec de l\'envoi de l\'e-mail de réinitialisation',
+    'An error occurred while sending the password reset email.': 'Une erreur s\'est produite lors de l\'envoi de l\'e-mail de réinitialisation du mot de passe.',
+    'Error': 'Erreur',
+    'An unexpected error occurred.': 'Une erreur inattendue s\'est produite.',
+    'Permission Denied': 'Accès refusé',
+    'Only administrators can reset user passwords.': 'Seuls les administrateurs peuvent réinitialiser les mots de passe des utilisateurs.',
   },
 };
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export interface LanguageProviderProps {
+  children: React.ReactNode;
+}
+
+export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   // Get initial language from localStorage or default to French
   const [language, setLanguageState] = useState<Language>(() => {
     const savedLanguage = localStorage.getItem('appLanguage') as Language;
