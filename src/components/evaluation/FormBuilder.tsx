@@ -382,15 +382,9 @@ export function FormBuilder({
                           </div>
                         </div>}
                       
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditQuestion(question.id)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Modifier
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteQuestion(selectedGrid.id, question.id)}>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
-                        </Button>
+                      <div className="flex justify-end space-x-2 bg-zinc-200">
+                        
+                        
                       </div>
                     </div>
                   </AccordionContent>
