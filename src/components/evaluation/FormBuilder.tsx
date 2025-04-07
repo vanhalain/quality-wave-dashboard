@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { PlusCircle, Trash2, Edit, Grid as GridIcon, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,9 +25,11 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface FormBuilderProps {
   selectedGridId?: number | null;
+  readOnly?: boolean;
+  onSubmit?: () => void;
 }
 
-export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderProps = {}) {
+export function FormBuilder({ selectedGridId: propSelectedGridId, readOnly = false, onSubmit }: FormBuilderProps = {}) {
   const { gridId } = useParams();
   const navigate = useNavigate();
   
@@ -189,7 +190,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
     };
 
     if (isEditMode && editingQuestionId !== null) {
-      // Mode édition - mettre à jour une question existante
       updateQuestion(selectedGridId, editingQuestionId, questionData);
       
       toast({
@@ -197,7 +197,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
         description: "La question a été modifiée avec succès"
       });
     } else {
-      // Mode création - ajouter une nouvelle question
       addQuestionToGrid(selectedGridId, questionData);
       
       toast({
@@ -223,7 +222,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
 
   const selectedGrid = grids.find(grid => grid.id === selectedGridId);
 
-  // Helper pour générer les étoiles pour l'aperçu
   const renderStars = (count: number, selectedCount: number) => {
     return Array.from({ length: count }).map((_, i) => (
       <Star 
@@ -232,6 +230,105 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
       />
     ));
   };
+
+  if (readOnly && selectedGrid) {
+    return (
+      <div className="space-y-4">
+        {selectedGrid.questions.map((question) => (
+          <div key={question.id} className="border rounded-lg p-4 space-y-2">
+            <label className="font-medium">
+              {question.text} {question.required && <span className="text-red-500">*</span>}
+            </label>
+            
+            {question.type === 'text' && (
+              <Textarea placeholder="Votre réponse" />
+            )}
+            
+            {question.type === 'select' && question.options && (
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {question.options.map(option => (
+                    <SelectItem key={option.id} value={option.id.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {question.type === 'radio' && question.options && (
+              <RadioGroup>
+                {question.options.map(option => (
+                  <div key={option.id} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option.id.toString()} id={`radio-${option.id}`} />
+                    <Label htmlFor={`radio-${option.id}`}>{option.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+            
+            {question.type === 'checkbox' && question.options && (
+              <div className="space-y-2">
+                {question.options.map(option => (
+                  <div key={option.id} className="flex items-center space-x-2">
+                    <Checkbox id={`checkbox-${option.id}`} />
+                    <Label htmlFor={`checkbox-${option.id}`}>{option.label}</Label>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {question.type === 'slider' && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{question.minValue}</span>
+                  <span>{question.maxValue}</span>
+                </div>
+                <Slider 
+                  defaultValue={[Math.floor((question.minValue! + question.maxValue!) / 2)]} 
+                  min={question.minValue} 
+                  max={question.maxValue} 
+                  step={1}
+                />
+                <div className="text-center text-sm">
+                  Valeur: {Math.floor((question.minValue! + question.maxValue!) / 2)}
+                </div>
+              </div>
+            )}
+            
+            {question.type === 'toggle' && (
+              <div className="flex items-center space-x-2">
+                <Switch id={`toggle-${question.id}`} />
+                <Label htmlFor={`toggle-${question.id}`}>Oui/Non</Label>
+              </div>
+            )}
+            
+            {question.type === 'rating' && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-1">
+                  {renderStars(question.maxValue || 5, 0)}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Cliquez sur une étoile pour noter
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {onSubmit && (
+          <div className="flex justify-end">
+            <Button onClick={onSubmit}>
+              Soumettre l'évaluation
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -246,7 +343,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
       </div>
       
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Création de grille */}
         <Card>
           <CardHeader>
             <CardTitle>Créer une nouvelle grille</CardTitle>
@@ -275,7 +371,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
           </CardContent>
         </Card>
 
-        {/* Création de question */}
         <Card>
           <CardHeader>
             <CardTitle>Ajouter une question</CardTitle>
@@ -423,7 +518,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
         </Card>
       </div>
 
-      {/* Aperçu de la grille */}
       {selectedGrid && (
         <Card>
           <CardHeader>
@@ -443,7 +537,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
-                      {/* Aperçu du champ selon son type */}
                       {question.type === 'text' && (
                         <Input placeholder="Votre réponse" />
                       )}
@@ -456,7 +549,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                           <SelectContent>
                             {question.options.map(option => (
                               <SelectItem key={option.id} value={option.id.toString()}>
-                                {option.label} ({option.value})
+                                {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -468,7 +561,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                           {question.options.map(option => (
                             <div key={option.id} className="flex items-center space-x-2">
                               <RadioGroupItem value={option.id.toString()} id={`radio-${option.id}`} />
-                              <Label htmlFor={`radio-${option.id}`}>{option.label} ({option.value})</Label>
+                              <Label htmlFor={`radio-${option.id}`}>{option.label}</Label>
                             </div>
                           ))}
                         </RadioGroup>
@@ -479,7 +572,7 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
                           {question.options.map(option => (
                             <div key={option.id} className="flex items-center space-x-2">
                               <Checkbox id={`checkbox-${option.id}`} />
-                              <Label htmlFor={`checkbox-${option.id}`}>{option.label} ({option.value})</Label>
+                              <Label htmlFor={`checkbox-${option.id}`}>{option.label}</Label>
                             </div>
                           ))}
                         </div>
@@ -554,7 +647,6 @@ export function FormBuilder({ selectedGridId: propSelectedGridId }: FormBuilderP
         </Card>
       )}
 
-      {/* Dialog pour l'édition de question */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
