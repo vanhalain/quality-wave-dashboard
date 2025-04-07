@@ -137,19 +137,6 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
           ))}
         </ul>
       </nav>
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-white font-medium">U</span>
-          </div>
-          {!collapsed && (
-            <div className="ml-3">
-              <p className="text-sm font-medium text-sidebar-foreground">User Name</p>
-              <p className="text-xs text-sidebar-foreground/70">{t('Administrator')}</p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

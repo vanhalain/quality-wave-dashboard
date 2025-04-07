@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = 'admin' | 'quality_controller' | 'manager';
 
@@ -18,26 +19,52 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
+  updateUserProfile: (updates: Partial<User>) => Promise<{ success: boolean; message?: string }>;
+  setUser: (user: User | null) => void;
+  changeUserRole: (userId: number, newRole: UserRole) => Promise<{ success: boolean; message?: string }>;
 }
+
+// Mock users data for demonstration
+const mockUsers = [
+  {
+    id: 1,
+    email: 'admin@acquality.com',
+    role: 'admin' as UserRole,
+    name: 'Admin User',
+    status: 'active' as const,
+  },
+  {
+    id: 2,
+    email: 'quality@acquality.com',
+    role: 'quality_controller' as UserRole,
+    name: 'Quality Controller',
+    status: 'active' as const,
+  },
+  {
+    id: 3,
+    email: 'manager@acquality.com',
+    role: 'manager' as UserRole,
+    name: 'Team Manager',
+    status: 'active' as const,
+  },
+];
 
 // This is a mock implementation - in a real app, you would connect to your backend
 export const useAuth = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       login: async (email: string, password: string) => {
         // Mock authentication - replace with actual API call
-        if (email === 'admin@acquality.com' && password === 'password') {
+        const mockUser = mockUsers.find(
+          (u) => u.email === email && password === 'password'
+        );
+        
+        if (mockUser) {
           set({
-            user: {
-              id: 1,
-              email: 'admin@acquality.com',
-              role: 'admin',
-              name: 'Admin User',
-              status: 'active',
-            },
+            user: mockUser,
             token: 'mock-jwt-token',
             isAuthenticated: true,
           });
@@ -55,6 +82,35 @@ export const useAuth = create<AuthState>()(
           token: null,
           isAuthenticated: false,
         });
+      },
+      updateUserProfile: async (updates) => {
+        const { user } = get();
+        if (!user) {
+          return { success: false, message: 'User not authenticated' };
+        }
+
+        // In a real application, this would be an API call to update the user's profile
+        set({
+          user: {
+            ...user,
+            ...updates,
+          },
+        });
+
+        return { success: true, message: 'Profile updated successfully' };
+      },
+      setUser: (user) => {
+        set({ user });
+      },
+      changeUserRole: async (userId, newRole) => {
+        // In a real application, this would be an API call to update a user's role
+        // This is a mock implementation for demonstration
+        const userToUpdate = mockUsers.find(u => u.id === userId);
+        if (userToUpdate) {
+          userToUpdate.role = newRole;
+          return { success: true, message: 'Role updated successfully' };
+        }
+        return { success: false, message: 'User not found' };
       },
     }),
     {

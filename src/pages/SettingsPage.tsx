@@ -1,47 +1,88 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/lib/auth';
+import { useAuth, User, UserRole } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Languages } from 'lucide-react';
-import { useLanguage, Language } from '@/lib/language-context';
+import { useLanguage } from '@/lib/language-context';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Select,
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Badge } from '@/components/ui/badge';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, changeUserRole } = useAuth();
   const { toast } = useToast();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
+  const [users, setUsers] = useState<User[]>([
+    {
+      id: 1,
+      email: 'admin@acquality.com',
+      role: 'admin',
+      name: 'Admin User',
+      status: 'active',
+    },
+    {
+      id: 2,
+      email: 'quality@acquality.com',
+      role: 'quality_controller',
+      name: 'Quality Controller',
+      status: 'active',
+    },
+    {
+      id: 3,
+      email: 'manager@acquality.com',
+      role: 'manager',
+      name: 'Team Manager',
+      status: 'active',
+    },
+  ]);
 
-  const handleProfileUpdate = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    toast({
-      title: t('Profile updated'),
-      description: t('Your profile information has been updated successfully.'),
-    });
+  const handleRoleChange = async (userId: number, newRole: UserRole) => {
+    if (user?.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: t('Permission Denied'),
+        description: t('Only administrators can change user roles.'),
+      });
+      return;
+    }
+
+    const result = await changeUserRole(userId, newRole);
+    if (result.success) {
+      // Update local state
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      ));
+      
+      toast({
+        title: t('Role Updated'),
+        description: t('User role has been updated successfully.'),
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: t('Update Failed'),
+        description: result.message || t('Failed to update user role.'),
+      });
+    }
   };
 
-  const handlePasswordUpdate = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    toast({
-      title: t('Password updated'),
-      description: t('Your password has been updated successfully.'),
-    });
-  };
-
-  const handleLanguageChange = (value: Language) => {
-    setLanguage(value);
-    toast({
-      title: t('Language changed'),
-      description: value === 'fr' 
-        ? t('La langue de l\'application a été définie sur Français.')
-        : t('Application language has been set to English.'),
-    });
-  };
+  const isDisabled = user?.role !== 'admin';
 
   return (
     <DashboardLayout>
@@ -51,119 +92,115 @@ export default function SettingsPage() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('Account Settings')}</CardTitle>
-            <CardDescription>
-              {t('Manage your account preferences')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="profile">
-              <TabsList className="mb-4">
-                <TabsTrigger value="profile">{t('Profile')}</TabsTrigger>
-                <TabsTrigger value="password">{t('Password')}</TabsTrigger>
-                <TabsTrigger value="notifications">{t('Notifications')}</TabsTrigger>
-              </TabsList>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>{t('User Management')}</CardTitle>
+          <CardDescription>
+            {t('Manage user roles and permissions')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="users">
+            <TabsList>
+              <TabsTrigger value="users">{t('Users')}</TabsTrigger>
+              <TabsTrigger value="roles">{t('Roles')}</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="users" className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('Name')}</TableHead>
+                    <TableHead>{t('Email')}</TableHead>
+                    <TableHead>{t('Status')}</TableHead>
+                    <TableHead>{t('Role')}</TableHead>
+                    <TableHead>{t('Actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.status === 'active' ? 'outline' : 'secondary'}>
+                          {t(user.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          disabled={isDisabled}
+                          value={user.role}
+                          onValueChange={(value) => handleRoleChange(user.id, value as UserRole)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder={t('Select role')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">{t('admin')}</SelectItem>
+                            <SelectItem value="quality_controller">{t('quality_controller')}</SelectItem>
+                            <SelectItem value="manager">{t('manager')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" disabled={isDisabled}>
+                          {t('Edit')}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
               
-              <TabsContent value="profile">
-                <form onSubmit={handleProfileUpdate} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">{t('Name')}</Label>
-                    <Input id="name" defaultValue={user?.name} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue={user?.email} />
-                  </div>
-                  <Button type="submit">{t('Save Changes')}</Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="password">
-                <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="current-password">
-                      {t('Current Password')}
-                    </Label>
-                    <Input id="current-password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">
-                      {t('New Password')}
-                    </Label>
-                    <Input id="new-password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">
-                      {t('Confirm New Password')}
-                    </Label>
-                    <Input id="confirm-password" type="password" />
-                  </div>
-                  <Button type="submit">{t('Update Password')}</Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="notifications">
-                <div className="space-y-4">
-                  <p className="text-muted-foreground">
-                    {t('Configure your notification preferences')}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('Coming soon...')}
-                  </p>
+              {isDisabled && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  {t('Note: Only administrators can change user roles and edit users.')}
+                </p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="roles" className="mt-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">{t('admin')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {t('Full access to all features including user management and system configuration.')}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">{t('quality_controller')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {t('Can create and manage evaluations, view records, and access quality reports.')}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">{t('manager')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {t('Can view evaluation results, create campaigns, and manage team performance.')}
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('Preferences')}</CardTitle>
-            <CardDescription>
-              {t('Customize the appearance of your dashboard')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Languages className="h-5 w-5 text-muted-foreground" />
-                <h3 className="text-lg font-medium">
-                  {t('Application Language')}
-                </h3>
               </div>
-              
-              <Select value={language} onValueChange={(value) => handleLanguageChange(value as Language)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('Select language')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <p className="text-sm text-muted-foreground">
-                {t('Choose your preferred language for the application interface.')}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-muted-foreground" />
-                <h3 className="text-lg font-medium">
-                  {t('Theme')}
-                </h3>
-              </div>
-              <p className="text-muted-foreground">
-                {t('Coming soon...')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </DashboardLayout>
   );
 }

@@ -11,6 +11,7 @@ import CampaignDetailPage from "./pages/CampaignDetailPage";
 import UsersPage from "./pages/UsersPage";
 import EvaluationsPage from "./pages/EvaluationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 import GridsPage from "./pages/GridsPage";
 import GridEditorPage from "./pages/GridEditorPage";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/grids/editor" element={<ProtectedRoute><GridEditorPage /></ProtectedRoute>} />
             <Route path="/grids/editor/:gridId" element={<ProtectedRoute><GridEditorPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
