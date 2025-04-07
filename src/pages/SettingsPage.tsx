@@ -23,8 +23,9 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
-import { Key, RotateCcw } from 'lucide-react';
+import { Key, Lock, Mail } from 'lucide-react';
 import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
+import { SetPasswordDialog } from '@/components/users/SetPasswordDialog';
 
 export default function SettingsPage() {
   const { user, changeUserRole } = useAuth();
@@ -55,7 +56,9 @@ export default function SettingsPage() {
   ]);
 
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isSetPasswordDialogOpen, setIsSetPasswordDialogOpen] = useState(false);
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const handleRoleChange = async (userId: number, newRole: UserRole) => {
     if (user?.role !== 'admin') {
@@ -99,6 +102,20 @@ export default function SettingsPage() {
     
     setSelectedUserEmail(userEmail);
     setIsResetPasswordDialogOpen(true);
+  };
+
+  const handleSetPassword = (userId: number) => {
+    if (user?.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: t('Permission Denied'),
+        description: t('Only administrators can reset user passwords.'),
+      });
+      return;
+    }
+    
+    setSelectedUserId(userId);
+    setIsSetPasswordDialogOpen(true);
   };
 
   const isDisabled = user?.role !== 'admin';
@@ -170,8 +187,17 @@ export default function SettingsPage() {
                             disabled={isDisabled}
                             onClick={() => handleResetPassword(user.email)}
                           >
-                            <Key className="h-3 w-3 mr-2" />
+                            <Mail className="h-3 w-3 mr-2" />
                             {t('Reset Password')}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={isDisabled}
+                            onClick={() => handleSetPassword(user.id)}
+                          >
+                            <Lock className="h-3 w-3 mr-2" />
+                            {t('Set New Password')}
                           </Button>
                         </div>
                       </TableCell>
@@ -233,6 +259,12 @@ export default function SettingsPage() {
         open={isResetPasswordDialogOpen}
         onClose={() => setIsResetPasswordDialogOpen(false)}
         userEmail={selectedUserEmail}
+      />
+
+      <SetPasswordDialog 
+        open={isSetPasswordDialogOpen}
+        onClose={() => setIsSetPasswordDialogOpen(false)}
+        userId={selectedUserId!}
       />
     </DashboardLayout>
   );

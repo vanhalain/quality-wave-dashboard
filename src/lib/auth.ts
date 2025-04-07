@@ -23,6 +23,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   changeUserRole: (userId: number, newRole: UserRole) => Promise<{ success: boolean; message?: string }>;
   resetUserPassword: (email: string) => Promise<{ success: boolean; message?: string }>;
+  setUserPassword: (userId: number, newPassword: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 // Mock users data for demonstration
@@ -131,6 +132,26 @@ export const useAuth = create<AuthState>()(
         return { 
           success: false, 
           message: 'User with this email not found' 
+        };
+      },
+      setUserPassword: async (userId, newPassword) => {
+        // In a real application, this would be an API call to directly set a user's password
+        // For now, we'll just simulate success for any user ID that exists in our mock data
+        const userExists = mockUsers.some(u => u.id === userId);
+        
+        if (userExists) {
+          // In a real application with Supabase, you would use something like:
+          // await supabase.auth.admin.updateUserById(userId, { password: newPassword });
+          
+          return { 
+            success: true, 
+            message: 'Password updated successfully' 
+          };
+        }
+        
+        return { 
+          success: false, 
+          message: 'User not found' 
         };
       },
     }),
