@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TranscriptChat } from '@/components/evaluation/TranscriptChat';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,11 +10,14 @@ import { useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/lib/campaigns';
 import { useGridStore } from '@/lib/evaluation-grids';
 import { Grid2x2, CheckCircle } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 export default function EvaluationsPage() {
   const navigate = useNavigate();
   const { campaigns } = useCampaignStore();
   const { getGrid } = useGridStore();
+  const { t } = useLanguage();
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Mock messages data
   const messages = [
@@ -54,25 +57,24 @@ export default function EvaluationsPage() {
   const campaignWithGrid = campaigns.find(campaign => campaign.gridId);
   const selectedGrid = campaignWithGrid?.gridId ? getGrid(campaignWithGrid.gridId) : null;
 
+  const handleSubmitEvaluation = () => {
+    // Here would go the logic to submit the evaluation
+    setIsSubmitted(true);
+    // Reset after 3 seconds for demo purposes
+    setTimeout(() => setIsSubmitted(false), 3000);
+  };
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-qa-charcoal">Évaluations</h1>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => navigate('/grids')}>
-            Gérer les grilles
-          </Button>
-          <Button onClick={() => navigate('/grids/editor')}>
-            Créer une grille
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold text-qa-charcoal">{t('Evaluations')}</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Conversation Transcript</CardTitle>
-            <CardDescription>Review the agent-customer interaction</CardDescription>
+            <CardTitle>{t('Conversation Transcript')}</CardTitle>
+            <CardDescription>{t('Review the agent-customer interaction')}</CardDescription>
           </CardHeader>
           <CardContent>
             <TranscriptChat messages={messages} />
@@ -83,13 +85,13 @@ export default function EvaluationsPage() {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle>Quality Assessment</CardTitle>
-                <CardDescription>Evaluate the conversation based on criteria</CardDescription>
+                <CardTitle>{t('Quality Assessment')}</CardTitle>
+                <CardDescription>{t('Evaluate the conversation based on criteria')}</CardDescription>
               </div>
               {campaignWithGrid && selectedGrid && (
                 <div className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs">
                   <Grid2x2 className="w-4 h-4 mr-1" />
-                  Grille: {selectedGrid.name}
+                  {t('Grid')}: {selectedGrid.name}
                 </div>
               )}
             </div>
@@ -97,28 +99,42 @@ export default function EvaluationsPage() {
           <CardContent>
             <Tabs defaultValue="form">
               <TabsList className="mb-4">
-                <TabsTrigger value="form">Évaluation</TabsTrigger>
-                <TabsTrigger value="results">Résultats</TabsTrigger>
+                <TabsTrigger value="form">{t('Evaluation')}</TabsTrigger>
+                <TabsTrigger value="results">{t('Results')}</TabsTrigger>
               </TabsList>
               <TabsContent value="form">
                 {selectedGrid ? (
-                  <FormBuilder selectedGridId={selectedGrid.id} />
+                  <div>
+                    <FormBuilder 
+                      selectedGridId={selectedGrid.id} 
+                      readOnly={false} 
+                      onSubmit={handleSubmitEvaluation}
+                    />
+                    <div className="mt-4 flex justify-end">
+                      <Button 
+                        onClick={handleSubmitEvaluation} 
+                        disabled={isSubmitted}
+                      >
+                        {isSubmitted ? t('Submitted') : t('Submit Evaluation')}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center p-6 border rounded-lg bg-muted/20">
                     <CheckCircle className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium mb-2">Aucune grille sélectionnée</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('No grid selected')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Veuillez sélectionner une grille d'évaluation pour cette campagne
+                      {t('Please select an evaluation grid for this campaign')}
                     </p>
                     <Button variant="outline" onClick={() => navigate('/campaigns')}>
-                      Configurer la campagne
+                      {t('Configure campaign')}
                     </Button>
                   </div>
                 )}
               </TabsContent>
               <TabsContent value="results">
                 <div className="p-4 text-center text-muted-foreground">
-                  Les résultats seront affichés après la soumission
+                  {t('Results will be displayed after submission')}
                 </div>
               </TabsContent>
             </Tabs>

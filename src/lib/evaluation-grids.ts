@@ -29,8 +29,25 @@ export interface Grid {
   updatedAt: string;
 }
 
+export interface EvaluationAnswer {
+  questionId: number;
+  value: string | number | boolean | number[];
+  comment?: string;
+}
+
+export interface Evaluation {
+  id: number;
+  gridId: number;
+  answers: EvaluationAnswer[];
+  score?: number;
+  status: 'draft' | 'submitted' | 'reviewed';
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface GridStore {
   grids: Grid[];
+  evaluations: Evaluation[];
   addGrid: (grid: Omit<Grid, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateGrid: (id: number, updates: Partial<Grid>) => void;
   deleteGrid: (id: number) => void;
@@ -38,6 +55,8 @@ interface GridStore {
   addQuestionToGrid: (gridId: number, question: Omit<Question, 'id'>) => void;
   updateQuestion: (gridId: number, questionId: number, updates: Partial<Question>) => void;
   deleteQuestion: (gridId: number, questionId: number) => void;
+  submitEvaluation: (gridId: number, answers: EvaluationAnswer[]) => void;
+  getEvaluationsByGridId: (gridId: number) => Evaluation[];
 }
 
 export const useGridStore = create<GridStore>()(
@@ -67,12 +86,26 @@ export const useGridStore = create<GridStore>()(
               minValue: 0,
               maxValue: 10,
               required: true
+            },
+            {
+              id: 3,
+              text: 'L\'agent a-t-il résolu le problème du client ?',
+              type: 'toggle',
+              required: true
+            },
+            {
+              id: 4,
+              text: 'Évaluez la satisfaction globale du client',
+              type: 'rating',
+              maxValue: 5,
+              required: true
             }
           ],
           createdAt: '2025-01-15T00:00:00.000Z',
           updatedAt: '2025-01-15T00:00:00.000Z'
         }
       ],
+      evaluations: [],
       
       addGrid: (grid) => {
         set((state) => ({
@@ -165,6 +198,64 @@ export const useGridStore = create<GridStore>()(
           ),
         }));
       },
+      
+      submitEvaluation: (gridId, answers) => {
+        set((state) => {
+          // Calculate score based on answers
+          const grid = state.grids.find(g => g.id === gridId);
+          if (!grid) return state;
+          
+          const totalQuestions = grid.questions.length;
+          const answeredQuestions = answers.length;
+          const completionRatio = answeredQuestions / totalQuestions;
+          
+          // Simple scoring algorithm - could be more sophisticated in a real app
+          let score = 0;
+          let totalPossibleScore = 0;
+          
+          answers.forEach(answer => {
+            const question = grid.questions.find(q => q.id === answer.questionId);
+            if (!question) return;
+            
+            if (question.type === 'radio' || question.type === 'select') {
+              const selectedOption = question.options?.find(opt => opt.value === Number(answer.value));
+              if (selectedOption) {
+                score += selectedOption.value;
+                totalPossibleScore += Math.max(...(question.options?.map(opt => opt.value) || [0]));
+              }
+            } else if (question.type === 'slider' || question.type === 'rating') {
+              const value = Number(answer.value);
+              score += value;
+              totalPossibleScore += question.maxValue || 10;
+            } else if (question.type === 'toggle') {
+              if (answer.value === true) {
+                score += 1;
+              }
+              totalPossibleScore += 1;
+            }
+          });
+          
+          const normalizedScore = totalPossibleScore > 0 ? (score / totalPossibleScore) * 100 : 0;
+          
+          const newEvaluation: Evaluation = {
+            id: Math.max(0, ...state.evaluations.map(e => e.id), 0) + 1,
+            gridId,
+            answers,
+            score: Math.round(normalizedScore),
+            status: 'submitted',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          return {
+            evaluations: [...state.evaluations, newEvaluation]
+          };
+        });
+      },
+      
+      getEvaluationsByGridId: (gridId) => {
+        return get().evaluations.filter(evaluation => evaluation.gridId === gridId);
+      }
     }),
     {
       name: 'grid-storage',
