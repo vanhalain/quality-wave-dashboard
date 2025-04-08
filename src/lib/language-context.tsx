@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 // Define the available languages
@@ -8,12 +9,18 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
+  addTranslation: (lang: Language, key: string, value: string) => void;
+  updateTranslation: (lang: Language, key: string, value: string) => void;
+  getAllTranslations: () => Record<string, Record<string, string>>;
 }
 
 const defaultValue: LanguageContextType = {
   language: 'fr',
   setLanguage: () => {},
   t: (key: string) => key,
+  addTranslation: () => {},
+  updateTranslation: () => {},
+  getAllTranslations: () => ({ en: {}, fr: {} }),
 };
 
 const LanguageContext = createContext<LanguageContextType>(defaultValue);
@@ -129,6 +136,25 @@ const translations: Record<string, Record<string, string>> = {
     'Select role': 'Select role',
     'Note: Only administrators can change user roles and edit users.': 'Note: Only administrators can change user roles and edit users.',
     'Set New Password': 'Set New Password',
+    // Translation Manager
+    'Translation Manager': 'Translation Manager',
+    'Manage application translations': 'Manage application translations',
+    'Add Translation': 'Add Translation',
+    'Key': 'Key',
+    'English': 'English',
+    'French': 'French',
+    'Add': 'Add',
+    'Edit': 'Edit',
+    'Save': 'Save',
+    'Translation added': 'Translation added',
+    'Translation updated': 'Translation updated',
+    'Translation key already exists': 'Translation key already exists',
+    'Please fill in all fields': 'Please fill in all fields',
+    'Filter translations': 'Filter translations',
+    'No results found': 'No results found',
+    'Try a different search term or clear filters': 'Try a different search term or clear filters',
+    'Export Translations': 'Export Translations',
+    'Import Translations': 'Import Translations',
   },
   fr: {
     // Dashboard
@@ -190,7 +216,6 @@ const translations: Record<string, Record<string, string>> = {
     'Choose your preferred language for the application interface.': 'Choisissez la langue que vous préférez pour l\'interface de l\'application.',
     'Language changed': 'Langue modifiée',
     'Application language has been set to English.': 'La langue de l\'application a été définie sur Français.',
-    'Langue modifiée': 'Langue modifiée',
     'Profile updated': 'Profil mis à jour',
     'Your profile information has been updated successfully.': 'Vos informations de profil ont été mises à jour avec succès.',
     'Password updated': 'Mot de passe mis à jour',
@@ -240,6 +265,25 @@ const translations: Record<string, Record<string, string>> = {
     'Select role': 'Sélectionner un rôle',
     'Note: Only administrators can change user roles and edit users.': 'Remarque : Seuls les administrateurs peuvent modifier les rôles et éditer les utilisateurs.',
     'Set New Password': 'Définir un nouveau mot de passe',
+    // Translation Manager
+    'Translation Manager': 'Gestionnaire de traductions',
+    'Manage application translations': 'Gérer les traductions de l\'application',
+    'Add Translation': 'Ajouter une traduction',
+    'Key': 'Clé',
+    'English': 'Anglais',
+    'French': 'Français',
+    'Add': 'Ajouter',
+    'Edit': 'Modifier',
+    'Save': 'Enregistrer',
+    'Translation added': 'Traduction ajoutée',
+    'Translation updated': 'Traduction mise à jour',
+    'Translation key already exists': 'La clé de traduction existe déjà',
+    'Please fill in all fields': 'Veuillez remplir tous les champs',
+    'Filter translations': 'Filtrer les traductions',
+    'No results found': 'Aucun résultat trouvé',
+    'Try a different search term or clear filters': 'Essayez un autre terme de recherche ou effacez les filtres',
+    'Export Translations': 'Exporter les traductions',
+    'Import Translations': 'Importer les traductions',
   },
 };
 
@@ -254,9 +298,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return (savedLanguage && (savedLanguage === 'fr' || savedLanguage === 'en')) ? savedLanguage : 'fr';
   });
 
+  // State to store translations
+  const [translationsState, setTranslationsState] = useState(translations);
+
   // Translation function
   const t = (key: string): string => {
-    return translations[language][key] || key;
+    return translationsState[language][key] || key;
   };
 
   // Update language and save to localStorage
@@ -265,8 +312,42 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     localStorage.setItem('appLanguage', newLanguage);
   };
 
+  // Add a new translation
+  const addTranslation = (lang: Language, key: string, value: string) => {
+    setTranslationsState(prev => ({
+      ...prev,
+      [lang]: {
+        ...prev[lang],
+        [key]: value
+      }
+    }));
+  };
+
+  // Update an existing translation
+  const updateTranslation = (lang: Language, key: string, value: string) => {
+    setTranslationsState(prev => ({
+      ...prev,
+      [lang]: {
+        ...prev[lang],
+        [key]: value
+      }
+    }));
+  };
+
+  // Get all translations
+  const getAllTranslations = () => {
+    return translationsState;
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ 
+      language, 
+      setLanguage, 
+      t, 
+      addTranslation, 
+      updateTranslation, 
+      getAllTranslations 
+    }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,5 +1,5 @@
 
-import { BarChart3, FileText, Home, Settings, Users, Grid, PenSquare } from 'lucide-react';
+import { BarChart3, FileText, Home, Settings, Users, Grid, PenSquare, Languages } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -64,6 +64,18 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
       name: t('Settings'),
       href: '/settings',
       icon: Settings,
+      submenu: [
+        {
+          name: t('User Management'),
+          href: '/settings',
+          icon: Users,
+        },
+        {
+          name: t('Translation Manager'),
+          href: '/translations',
+          icon: Languages,
+        },
+      ],
     },
   ];
 
