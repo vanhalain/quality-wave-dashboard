@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 
 // Define the available languages
@@ -81,8 +80,6 @@ const translations: Record<string, Record<string, string>> = {
     'Choose your preferred language for the application interface.': 'Choose your preferred language for the application interface.',
     'Language changed': 'Language changed',
     'Application language has been set to English.': 'Application language has been set to English.',
-    'Langue modifiée': 'Langue modifiée',
-    'La langue de l\'application a été définie sur Français.': 'La langue de l\'application a été définie sur Français.',
     'Profile updated': 'Profile updated',
     'Your profile information has been updated successfully.': 'Your profile information has been updated successfully.',
     'Password updated': 'Password updated',
@@ -194,7 +191,6 @@ const translations: Record<string, Record<string, string>> = {
     'Language changed': 'Langue modifiée',
     'Application language has been set to English.': 'La langue de l\'application a été définie sur Français.',
     'Langue modifiée': 'Langue modifiée',
-    'La langue de l\'application a été définie sur Français.': 'La langue de l\'application a été définie sur Français.',
     'Profile updated': 'Profil mis à jour',
     'Your profile information has been updated successfully.': 'Vos informations de profil ont été mises à jour avec succès.',
     'Password updated': 'Mot de passe mis à jour',
