@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Define the available languages
@@ -48,7 +47,7 @@ const translations: Record<string, Record<string, string>> = {
     // Evaluation page
     'Conversation Transcript': 'Conversation Transcript',
     'Review the agent-customer interaction': 'Review the agent-customer interaction',
-    'Quality Assessment': 'Evaluate the conversation based on criteria',
+    'Quality Assessment': 'Quality Assessment',
     'Evaluate the conversation based on criteria': 'Evaluate the conversation based on criteria',
     'Grid': 'Grid',
     'Evaluation': 'Evaluation',
@@ -192,9 +191,9 @@ const translations: Record<string, Record<string, string>> = {
     'Select language': 'Sélectionner une langue',
     'Choose your preferred language for the application interface.': 'Choisissez la langue que vous préférez pour l\'interface de l\'application.',
     'Language changed': 'Langue modifiée',
-    'Application language has been set to English.': 'La langue de l\'application a été définie sur Anglais.',
+    'Application language has been set to English.': 'La langue de l\'application a été définie sur Français.',
     'Langue modifiée': 'Langue modifiée',
-    'La langue de l\'application a été définie sur Français.': 'La langue de l\'application a été définie sur Français.',
+    'La langue de l\'application a été définie sur Français.',
     'Profile updated': 'Profil mis à jour',
     'Your profile information has been updated successfully.': 'Vos informations de profil ont été mises à jour avec succès.',
     'Password updated': 'Mot de passe mis à jour',
