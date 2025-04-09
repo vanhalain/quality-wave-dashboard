@@ -40,8 +40,12 @@ export async function createCampaign(campaignData: any) {
     description: campaignData.description,
     status: campaignData.status,
     grid_id: campaignData.gridId || null,
-    start_date: new Date().toISOString() // Adding the required start_date field
+    start_date: new Date().toISOString(), // Adding the required start_date field
+    // Ajouter l'ID de l'utilisateur actuel pour satisfaire la politique RLS
+    created_by: 'system' // Ou utiliser l'ID d'un utilisateur authentifié si disponible
   };
+
+  console.log('Tentative de création de campagne avec les données:', dbCampaignData);
 
   const { data, error } = await supabase
     .from('campaigns')
@@ -53,6 +57,7 @@ export async function createCampaign(campaignData: any) {
     throw error;
   }
 
+  console.log('Campagne créée avec succès:', data?.[0]);
   return data?.[0];
 }
 
@@ -63,8 +68,11 @@ export async function updateCampaign(id: number, campaignData: any) {
     name: campaignData.name,
     description: campaignData.description,
     status: campaignData.status,
-    grid_id: campaignData.gridId
+    grid_id: campaignData.gridId,
+    // Ne pas modifier le champ created_by lors de la mise à jour
   };
+
+  console.log(`Tentative de mise à jour de la campagne ${id} avec les données:`, dbCampaignData);
 
   const { data, error } = await supabase
     .from('campaigns')
@@ -77,11 +85,14 @@ export async function updateCampaign(id: number, campaignData: any) {
     throw error;
   }
 
+  console.log('Campagne mise à jour avec succès:', data?.[0]);
   return data?.[0];
 }
 
 // Supprimer une campagne
 export async function deleteCampaign(id: number) {
+  console.log(`Tentative de suppression de la campagne ${id}`);
+  
   const { error } = await supabase
     .from('campaigns')
     .delete()
@@ -92,5 +103,6 @@ export async function deleteCampaign(id: number) {
     throw error;
   }
 
+  console.log(`Campagne ${id} supprimée avec succès`);
   return true;
 }
