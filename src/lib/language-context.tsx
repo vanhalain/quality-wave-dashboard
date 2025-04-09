@@ -155,6 +155,14 @@ const translations: Record<string, Record<string, string>> = {
     'Try a different search term or clear filters': 'Try a different search term or clear filters',
     'Export Translations': 'Export Translations',
     'Import Translations': 'Import Translations',
+    'Edit Translation': 'Edit Translation',
+    'Edit the translation values for this key': 'Edit the translation values for this key',
+    'Add a new translation key and its values': 'Add a new translation key and its values',
+    'My Profile': 'My Profile',
+    'Logout': 'Logout',
+    'Full access to all features including user management and system configuration.': 'Full access to all features including user management and system configuration.',
+    'Can create and manage evaluations, view records, and access quality reports.': 'Can create and manage evaluations, view records, and access quality reports.',
+    'Can view evaluation results, create campaigns, and manage team performance.': 'Can view evaluation results, create campaigns, and manage team performance.',
   },
   fr: {
     // Dashboard
@@ -284,6 +292,14 @@ const translations: Record<string, Record<string, string>> = {
     'Try a different search term or clear filters': 'Essayez un autre terme de recherche ou effacez les filtres',
     'Export Translations': 'Exporter les traductions',
     'Import Translations': 'Importer les traductions',
+    'Edit Translation': 'Modifier la traduction',
+    'Edit the translation values for this key': 'Modifier les valeurs de traduction pour cette clé',
+    'Add a new translation key and its values': 'Ajouter une nouvelle clé de traduction et ses valeurs',
+    'My Profile': 'Mon profil',
+    'Logout': 'Déconnexion',
+    'Full access to all features including user management and system configuration.': 'Accès complet à toutes les fonctionnalités, y compris la gestion des utilisateurs et la configuration du système.',
+    'Can create and manage evaluations, view records, and access quality reports.': 'Peut créer et gérer des évaluations, consulter des enregistrements et accéder aux rapports de qualité.',
+    'Can view evaluation results, create campaigns, and manage team performance.': 'Peut consulter les résultats des évaluations, créer des campagnes et gérer les performances de l\'équipe.',
   },
 };
 
