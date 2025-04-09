@@ -105,5 +105,27 @@ export const enTranslations: TranslationType = {
   "This action will permanently delete the campaign": "This action will permanently delete the campaign",
   "This action will permanently delete the grid": "This action will permanently delete the grid",
   "and all associated data.": "and all associated data.",
-  "This action cannot be undone.": "This action cannot be undone."
+  "This action cannot be undone.": "This action cannot be undone.",
+  
+  // Translation Manager
+  "Translation Manager": "Translation Manager",
+  "Manage application translations": "Manage application translations",
+  "Add Translation": "Add Translation",
+  "Edit Translation": "Edit Translation",
+  "Key": "Key",
+  "English": "English",
+  "French": "French",
+  "Translation key already exists": "Translation key already exists",
+  "Translation added": "Translation added",
+  "Translation updated": "Translation updated",
+  "Export Translations": "Export Translations",
+  "Add a new translation key and its values": "Add a new translation key and its values",
+  "Edit the translation values for this key": "Edit the translation values for this key",
+  "Filter translations": "Filter translations",
+  "No results found": "No results found",
+  "Try a different search term or clear filters": "Try a different search term or clear filters",
+  "Please fill in all fields": "Please fill in all fields"
 };
+
+// Default export needed for the index.ts import
+export default enTranslations;

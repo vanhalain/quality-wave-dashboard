@@ -39,12 +39,13 @@ export async function createCampaign(campaignData: any) {
     name: campaignData.name,
     description: campaignData.description,
     status: campaignData.status,
-    grid_id: campaignData.gridId || null
+    grid_id: campaignData.gridId || null,
+    start_date: new Date().toISOString() // Adding the required start_date field
   };
 
   const { data, error } = await supabase
     .from('campaigns')
-    .insert([dbCampaignData])
+    .insert(dbCampaignData)
     .select();
 
   if (error) {

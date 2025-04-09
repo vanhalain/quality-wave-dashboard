@@ -105,5 +105,27 @@ export const frTranslations: TranslationType = {
   "This action will permanently delete the campaign": "Cette action supprimera définitivement la campagne",
   "This action will permanently delete the grid": "Cette action supprimera définitivement la grille",
   "and all associated data.": "et toutes les données associées.",
-  "This action cannot be undone.": "Cette action ne peut pas être annulée."
+  "This action cannot be undone.": "Cette action ne peut pas être annulée.",
+  
+  // Translation Manager
+  "Translation Manager": "Gestionnaire de traductions",
+  "Manage application translations": "Gérer les traductions de l'application",
+  "Add Translation": "Ajouter une traduction",
+  "Edit Translation": "Modifier la traduction",
+  "Key": "Clé",
+  "English": "Anglais",
+  "French": "Français",
+  "Translation key already exists": "La clé de traduction existe déjà",
+  "Translation added": "Traduction ajoutée",
+  "Translation updated": "Traduction mise à jour",
+  "Export Translations": "Exporter les traductions",
+  "Add a new translation key and its values": "Ajouter une nouvelle clé de traduction et ses valeurs",
+  "Edit the translation values for this key": "Modifier les valeurs de traduction pour cette clé",
+  "Filter translations": "Filtrer les traductions",
+  "No results found": "Aucun résultat trouvé",
+  "Try a different search term or clear filters": "Essayez un autre terme de recherche ou effacez les filtres",
+  "Please fill in all fields": "Veuillez remplir tous les champs"
 };
+
+// Default export needed for the index.ts import
+export default frTranslations;

@@ -51,7 +51,7 @@ export async function createGrid(gridData: any) {
 
   const { data, error } = await supabase
     .from('evaluation_grids')
-    .insert([dbGridData])
+    .insert(dbGridData)
     .select();
 
   if (error) {
@@ -133,12 +133,11 @@ export async function deleteGrid(id: number) {
 export async function createGridSection(sectionData: any) {
   const { data, error } = await supabase
     .from('grid_sections')
-    .insert([{
+    .insert({
       grid_id: sectionData.gridId,
       title: sectionData.title,
-      description: sectionData.description || '',
-      order: sectionData.order || 0
-    }])
+      order_index: sectionData.order || 0 // Changed 'order' to 'order_index' to match the database schema
+    })
     .select();
 
   if (error) {
@@ -153,16 +152,14 @@ export async function createGridSection(sectionData: any) {
 export async function createQuestion(questionData: any) {
   const { data, error } = await supabase
     .from('questions')
-    .insert([{
+    .insert({
       section_id: questionData.sectionId,
       text: questionData.text,
       type: questionData.type,
       required: questionData.required,
       options: questionData.options,
-      min_value: questionData.minValue,
-      max_value: questionData.maxValue,
-      order: questionData.order || 0
-    }])
+      order_index: questionData.order || 0 // Changed 'order' to 'order_index' to match the database schema
+    })
     .select();
 
   if (error) {

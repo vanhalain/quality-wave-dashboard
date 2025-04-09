@@ -2,8 +2,11 @@
 // Define the available languages
 export type Language = 'en' | 'fr';
 
-// Translation dictionary type
+// Export the translation dictionary type
 export type TranslationDictionary = Record<string, string>;
+
+// Export the type for a complete set of translations
+export type TranslationType = Record<string, string>;
 
 // Context type definition
 export interface LanguageContextType {
