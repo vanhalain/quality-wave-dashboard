@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useLanguage, Language } from '@/lib/language-context';
+import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Download, Upload, Plus, Search, Save, X, Check, Edit, FileDown, FileUp } from 'lucide-react';
+import { FileDown, Plus, Search, Edit } from 'lucide-react';
 
 interface TranslationItem {
   key: string;
