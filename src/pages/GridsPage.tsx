@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/lib/language-context';
+import { fetchGrids, deleteGrid as deleteGridAPI } from '@/services/gridService';
 
 export default function GridsPage() {
   const { grids, deleteGrid } = useGridStore();
@@ -17,29 +18,66 @@ export default function GridsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentGrid, setCurrentGrid] = useState<Grid | undefined>();
   const { language, t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbGrids, setDbGrids] = useState<any[]>([]);
 
-  const handleEditGrid = (grid: Grid) => {
+  useEffect(() => {
+    const loadGrids = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchGrids();
+        setDbGrids(data);
+      } catch (error) {
+        console.error("Erreur lors du chargement des grilles:", error);
+        toast({
+          title: t('Error'),
+          description: "Impossible de charger les grilles d'évaluation. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadGrids();
+  }, [toast, t]);
+
+  const handleEditGrid = (grid: any) => {
     navigate(`/grids/editor/${grid.id}`);
   };
 
-  const handleViewGrid = (grid: Grid) => {
-    // Rediriger vers l'éditeur en mode lecture seule au lieu de "/grids/{id}"
+  const handleViewGrid = (grid: any) => {
     navigate(`/grids/editor/${grid.id}?view=true`);
   };
 
-  const handleDeleteGrid = (grid: Grid) => {
+  const handleDeleteGrid = async (grid: any) => {
     setCurrentGrid(grid);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteGrid = () => {
+  const confirmDeleteGrid = async () => {
     if (currentGrid) {
-      deleteGrid(currentGrid.id);
-      toast({
-        title: t('Grid deleted'),
-        description: `${currentGrid.name} ${t('has been deleted.')}`,
-      });
-      setIsDeleteDialogOpen(false);
+      try {
+        await deleteGridAPI(currentGrid.id);
+        deleteGrid(currentGrid.id);
+        
+        // Mettre à jour la liste après suppression
+        setDbGrids(prev => prev.filter(g => g.id !== currentGrid.id));
+        
+        toast({
+          title: t('Grid deleted'),
+          description: `${currentGrid.name} ${t('has been deleted.')}`,
+        });
+      } catch (error) {
+        console.error("Erreur lors de la suppression de la grille:", error);
+        toast({
+          title: t('Error'),
+          description: "Impossible de supprimer la grille. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleteDialogOpen(false);
+      }
     }
   };
 
@@ -56,6 +94,12 @@ export default function GridsPage() {
     });
   };
 
+  // Générer des données simulées pour le nombre de questions
+  const getQuestionsCount = (gridId: number) => {
+    // Pour la simplicité, générer un nombre basé sur l'ID de la grille
+    return Math.max(3, (gridId * 2) % 10);
+  };
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
@@ -66,43 +110,49 @@ export default function GridsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {grids.map((grid) => (
-          <Card key={grid.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle>{grid.name}</CardTitle>
-              <CardDescription className="mt-1">{formatDate(grid.createdAt)}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                {grid.description}
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{grid.questions.length} {t('questions')}</span>
-                  <span className="font-medium">{t('Last modified')}: {formatDate(grid.updatedAt)}</span>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <p>{t('Loading')}...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {dbGrids.map((grid) => (
+            <Card key={grid.id} className="overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle>{grid.name}</CardTitle>
+                <CardDescription className="mt-1">{formatDate(grid.created_at)}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                  {grid.description}
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{getQuestionsCount(grid.id)} {t('questions')}</span>
+                    <span className="font-medium">{t('Last modified')}: {formatDate(grid.updated_at)}</span>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
-              <Button variant="ghost" size="sm" onClick={() => handleViewGrid(grid)}>
-                <Eye className="h-4 w-4 mr-2" />
-                {t('View')}
-              </Button>
-              <div className="flex space-x-2">
-                <Button variant="ghost" size="sm" onClick={() => handleEditGrid(grid)}>
-                  <Edit className="h-4 w-4" />
+              </CardContent>
+              <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
+                <Button variant="ghost" size="sm" onClick={() => handleViewGrid(grid)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  {t('View')}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDeleteGrid(grid)}>
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleEditGrid(grid)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteGrid(grid)}>
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {grids.length === 0 && (
+      {!isLoading && dbGrids.length === 0 && (
         <Card className="p-8 text-center">
           <CardContent>
             <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

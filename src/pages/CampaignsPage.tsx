@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,11 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { CampaignEditDialog } from '@/components/campaigns/CampaignEditDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { fetchCampaigns, deleteCampaign as deleteCampaignAPI, createCampaign as createCampaignAPI, updateCampaign as updateCampaignAPI } from '@/services/campaignService';
+import { useLanguage } from '@/lib/language-context';
+import { Tables } from '@/integrations/supabase/types';
+
+type CampaignType = Tables<'campaigns'>;
 
 export default function CampaignsPage() {
   const { campaigns, addCampaign, updateCampaign, deleteCampaign } = useCampaignStore();
@@ -17,8 +22,32 @@ export default function CampaignsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState<Campaign | undefined>();
   const [dialogMode, setDialogMode] = useState<'edit' | 'add'>('add');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbCampaigns, setDbCampaigns] = useState<CampaignType[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchCampaigns();
+        setDbCampaigns(data);
+      } catch (error) {
+        console.error("Erreur lors du chargement des campagnes:", error);
+        toast({
+          title: t('Error'),
+          description: "Impossible de charger les campagnes. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCampaigns();
+  }, [toast, t]);
 
   const handleAddCampaign = () => {
     setCurrentCampaign(undefined);
@@ -41,119 +70,173 @@ export default function CampaignsPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteCampaign = () => {
+  const confirmDeleteCampaign = async () => {
     if (currentCampaign) {
-      deleteCampaign(currentCampaign.id);
-      toast({
-        title: "Campaign deleted",
-        description: `${currentCampaign.name} has been removed.`,
-      });
-      setIsDeleteDialogOpen(false);
+      try {
+        await deleteCampaignAPI(currentCampaign.id);
+        deleteCampaign(currentCampaign.id);
+        
+        // Mettre à jour la liste après suppression
+        setDbCampaigns(prev => prev.filter(c => c.id !== currentCampaign.id));
+        
+        toast({
+          title: t("Campaign deleted"),
+          description: `${currentCampaign.name} ${t("has been removed.")}`,
+        });
+      } catch (error) {
+        console.error("Erreur lors de la suppression:", error);
+        toast({
+          title: t("Error"),
+          description: "Impossible de supprimer la campagne. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleteDialogOpen(false);
+      }
     }
   };
 
-  const handleSaveCampaign = (campaignData: any) => {
-    if (dialogMode === 'add') {
-      addCampaign(campaignData);
+  const handleSaveCampaign = async (campaignData: any) => {
+    try {
+      if (dialogMode === 'add') {
+        const newCampaign = await createCampaignAPI(campaignData);
+        addCampaign(newCampaign);
+        
+        // Mettre à jour la liste après ajout
+        setDbCampaigns(prev => [newCampaign, ...prev]);
+        
+        toast({
+          title: t("Campaign created"),
+          description: `${campaignData.name} ${t("has been created successfully.")}`,
+        });
+      } else if (currentCampaign) {
+        const updatedCampaign = await updateCampaignAPI(currentCampaign.id, campaignData);
+        updateCampaign(currentCampaign.id, updatedCampaign);
+        
+        // Mettre à jour la liste après modification
+        setDbCampaigns(prev => prev.map(c => c.id === currentCampaign.id ? updatedCampaign : c));
+        
+        toast({
+          title: t("Campaign updated"),
+          description: `${campaignData.name} ${t("has been updated successfully.")}`,
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement:", error);
       toast({
-        title: "Campaign created",
-        description: `${campaignData.name} has been created successfully.`,
+        title: t("Error"),
+        description: "Une erreur est survenue. Veuillez réessayer.",
+        variant: "destructive",
       });
-    } else if (currentCampaign) {
-      updateCampaign(currentCampaign.id, campaignData);
-      toast({
-        title: "Campaign updated",
-        description: `${campaignData.name} has been updated successfully.`,
-      });
+    } finally {
+      setIsEditDialogOpen(false);
     }
-    setIsEditDialogOpen(false);
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return date.toLocaleDateString(
+      localStorage.getItem('appLanguage') === 'fr' ? 'fr-FR' : 'en-US', 
+      { year: 'numeric', month: 'short', day: 'numeric' }
+    );
+  };
+
+  // Calculer des statistiques simulées pour les campagnes dynamiques
+  const getSimulatedStats = (campaign: CampaignType) => {
+    // Générer des valeurs aléatoires basées sur l'ID pour la stabilité
+    const seed = campaign.id || 1;
+    const recordCount = Math.max(5, seed * 3 + 10);
+    const evaluatedCount = Math.floor(recordCount * (0.1 + (seed % 10) / 10));
+    
+    return {
+      recordCount,
+      evaluatedCount
+    };
   };
 
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-qa-charcoal">Campaigns</h1>
+        <h1 className="text-3xl font-bold text-qa-charcoal">{t('Campaigns')}</h1>
         <Button onClick={handleAddCampaign}>
           <FileText className="h-4 w-4 mr-2" />
-          Add Campaign
+          {t('Add Campaign')}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => {
-          const completionPercentage = Math.round((campaign.evaluatedCount / campaign.recordCount) * 100);
-          
-          return (
-            <Card key={campaign.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{campaign.name}</CardTitle>
-                    <CardDescription className="mt-1">{formatDate(campaign.createdAt)}</CardDescription>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <p>{t('Loading')}...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {dbCampaigns.map((campaign) => {
+            const stats = getSimulatedStats(campaign);
+            const completionPercentage = Math.round((stats.evaluatedCount / stats.recordCount) * 100);
+            
+            return (
+              <Card key={campaign.id} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{campaign.name}</CardTitle>
+                      <CardDescription className="mt-1">{formatDate(campaign.created_at)}</CardDescription>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      campaign.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : campaign.status === 'inactive'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {t(campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1))}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    campaign.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : campaign.status === 'inactive'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {campaign.description}
-                </p>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{campaign.evaluatedCount} of {campaign.recordCount} evaluated</span>
-                    <span className="font-medium">{completionPercentage}%</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                    {campaign.description}
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>{stats.evaluatedCount} {t('of')} {stats.recordCount} {t('evaluated')}</span>
+                      <span className="font-medium">{completionPercentage}%</span>
+                    </div>
+                    <Progress value={completionPercentage} className="h-2" />
                   </div>
-                  <Progress value={completionPercentage} className="h-2" />
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
-                <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaign)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  View
-                </Button>
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditCampaign(campaign)}>
-                    <Edit className="h-4 w-4" />
+                </CardContent>
+                <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
+                  <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaign as unknown as Campaign)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t('View')}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteCampaign(campaign)}>
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
+                  <div className="flex space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditCampaign(campaign as unknown as Campaign)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCampaign(campaign as unknown as Campaign)}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-      {campaigns.length === 0 && (
+      {!isLoading && dbCampaigns.length === 0 && (
         <Card className="p-8 text-center">
           <CardContent>
             <BarChart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">No Campaigns Yet</p>
+            <p className="text-lg font-medium mb-2">{t('No Campaigns Yet')}</p>
             <p className="text-muted-foreground mb-4">
-              Get started by creating your first quality assessment campaign.
+              {t('Start by creating your first quality assessment campaign.')}
             </p>
             <Button onClick={handleAddCampaign}>
               <FileText className="h-4 w-4 mr-2" />
-              Create Campaign
+              {t('Create Campaign')}
             </Button>
           </CardContent>
         </Card>
@@ -170,16 +253,16 @@ export default function CampaignsPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the campaign "{currentCampaign?.name}" and all its associated data.
-              This action cannot be undone.
+              {t('This will permanently delete the campaign')} "{currentCampaign?.name}" {t('and all associated data.')}
+              {t('This action cannot be undone.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteCampaign} className="bg-destructive text-destructive-foreground">
-              Delete
+              {t('Delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
