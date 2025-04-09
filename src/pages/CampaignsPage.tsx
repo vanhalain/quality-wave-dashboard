@@ -100,7 +100,21 @@ export default function CampaignsPage() {
     try {
       if (dialogMode === 'add') {
         const newCampaign = await createCampaignAPI(campaignData);
-        addCampaign(newCampaign);
+        
+        // Ajouter les propriétés manquantes pour correspondre au type Campaign
+        const campaignToStore: Campaign = {
+          id: newCampaign.id,
+          name: newCampaign.name,
+          description: newCampaign.description,
+          status: newCampaign.status as 'active' | 'inactive' | 'completed',
+          gridId: newCampaign.grid_id,
+          recordCount: campaignData.recordCount || 0,
+          evaluatedCount: 0,
+          createdAt: newCampaign.created_at,
+          updatedAt: newCampaign.updated_at
+        };
+        
+        addCampaign(campaignToStore);
         
         // Mettre à jour la liste après ajout
         setDbCampaigns(prev => [newCampaign, ...prev]);
@@ -111,7 +125,17 @@ export default function CampaignsPage() {
         });
       } else if (currentCampaign) {
         const updatedCampaign = await updateCampaignAPI(currentCampaign.id, campaignData);
-        updateCampaign(currentCampaign.id, updatedCampaign);
+        
+        // Mettre à jour avec les propriétés correctes
+        const campaignToStore: Partial<Campaign> = {
+          name: updatedCampaign.name,
+          description: updatedCampaign.description,
+          status: updatedCampaign.status as 'active' | 'inactive' | 'completed',
+          gridId: updatedCampaign.grid_id,
+          updatedAt: updatedCampaign.updated_at
+        };
+        
+        updateCampaign(currentCampaign.id, campaignToStore);
         
         // Mettre à jour la liste après modification
         setDbCampaigns(prev => prev.map(c => c.id === currentCampaign.id ? updatedCampaign : c));
@@ -174,6 +198,19 @@ export default function CampaignsPage() {
             const stats = getSimulatedStats(campaign);
             const completionPercentage = Math.round((stats.evaluatedCount / stats.recordCount) * 100);
             
+            // Convertir l'objet de la base de données en objet Campaign pour les fonctions de gestion
+            const campaignObj: Campaign = {
+              id: campaign.id,
+              name: campaign.name,
+              description: campaign.description || '',
+              status: (campaign.status as 'active' | 'inactive' | 'completed') || 'active',
+              gridId: campaign.grid_id,
+              recordCount: stats.recordCount,
+              evaluatedCount: stats.evaluatedCount,
+              createdAt: campaign.created_at,
+              updatedAt: campaign.updated_at
+            };
+            
             return (
               <Card key={campaign.id} className="overflow-hidden">
                 <CardHeader className="pb-2">
@@ -207,15 +244,15 @@ export default function CampaignsPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
-                  <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaign as unknown as Campaign)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaignObj)}>
                     <Eye className="h-4 w-4 mr-2" />
                     {t('View')}
                   </Button>
                   <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCampaign(campaign as unknown as Campaign)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEditCampaign(campaignObj)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCampaign(campaign as unknown as Campaign)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCampaign(campaignObj)}>
                       <Trash className="h-4 w-4" />
                     </Button>
                   </div>
@@ -255,7 +292,7 @@ export default function CampaignsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('This will permanently delete the campaign')} "{currentCampaign?.name}" {t('and all associated data.')}
+              {t('This action will permanently delete the campaign')} "{currentCampaign?.name}" {t('and all associated data.')}
               {t('This action cannot be undone.')}
             </AlertDialogDescription>
           </AlertDialogHeader>

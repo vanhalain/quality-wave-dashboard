@@ -10,22 +10,26 @@ import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/lib/language-context';
 import { fetchGrids, deleteGrid as deleteGridAPI } from '@/services/gridService';
+import { Tables } from '@/integrations/supabase/types';
+
+type GridType = Tables<'evaluation_grids'>;
 
 export default function GridsPage() {
   const { grids, deleteGrid } = useGridStore();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentGrid, setCurrentGrid] = useState<Grid | undefined>();
+  const [currentGrid, setCurrentGrid] = useState<Grid | GridType | undefined>();
   const { language, t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
-  const [dbGrids, setDbGrids] = useState<any[]>([]);
+  const [dbGrids, setDbGrids] = useState<GridType[]>([]);
 
   useEffect(() => {
     const loadGrids = async () => {
       try {
         setIsLoading(true);
         const data = await fetchGrids();
+        console.log("Grids loaded:", data);
         setDbGrids(data);
       } catch (error) {
         console.error("Erreur lors du chargement des grilles:", error);
@@ -42,15 +46,15 @@ export default function GridsPage() {
     loadGrids();
   }, [toast, t]);
 
-  const handleEditGrid = (grid: any) => {
+  const handleEditGrid = (grid: GridType) => {
     navigate(`/grids/editor/${grid.id}`);
   };
 
-  const handleViewGrid = (grid: any) => {
+  const handleViewGrid = (grid: GridType) => {
     navigate(`/grids/editor/${grid.id}?view=true`);
   };
 
-  const handleDeleteGrid = async (grid: any) => {
+  const handleDeleteGrid = async (grid: GridType) => {
     setCurrentGrid(grid);
     setIsDeleteDialogOpen(true);
   };
@@ -59,7 +63,9 @@ export default function GridsPage() {
     if (currentGrid) {
       try {
         await deleteGridAPI(currentGrid.id);
-        deleteGrid(currentGrid.id);
+        if ('id' in currentGrid) {
+          deleteGrid(currentGrid.id);
+        }
         
         // Mettre à jour la liste après suppression
         setDbGrids(prev => prev.filter(g => g.id !== currentGrid.id));
@@ -124,7 +130,7 @@ export default function GridsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {grid.description}
+                  {grid.description || ''}
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">

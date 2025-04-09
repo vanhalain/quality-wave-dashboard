@@ -34,9 +34,17 @@ export async function fetchCampaignById(id: number) {
 
 // Créer une nouvelle campagne
 export async function createCampaign(campaignData: any) {
+  // Adapter les noms de propriétés aux colonnes de la base de données
+  const dbCampaignData = {
+    name: campaignData.name,
+    description: campaignData.description,
+    status: campaignData.status,
+    grid_id: campaignData.gridId || null
+  };
+
   const { data, error } = await supabase
     .from('campaigns')
-    .insert([campaignData])
+    .insert([dbCampaignData])
     .select();
 
   if (error) {
@@ -49,9 +57,17 @@ export async function createCampaign(campaignData: any) {
 
 // Mettre à jour une campagne existante
 export async function updateCampaign(id: number, campaignData: any) {
+  // Adapter les noms de propriétés aux colonnes de la base de données
+  const dbCampaignData = {
+    name: campaignData.name,
+    description: campaignData.description,
+    status: campaignData.status,
+    grid_id: campaignData.gridId
+  };
+
   const { data, error } = await supabase
     .from('campaigns')
-    .update(campaignData)
+    .update(dbCampaignData)
     .eq('id', id)
     .select();
 

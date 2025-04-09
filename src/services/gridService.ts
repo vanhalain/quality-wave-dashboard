@@ -13,6 +13,7 @@ export async function fetchGrids() {
     throw error;
   }
 
+  console.log("Grilles récupérées:", data);
   return data || [];
 }
 
@@ -40,9 +41,17 @@ export async function fetchGridById(id: number) {
 
 // Créer une nouvelle grille
 export async function createGrid(gridData: any) {
+  // S'assurer que les données correspondent aux colonnes de la base de données
+  const dbGridData = {
+    name: gridData.name,
+    description: gridData.description || '',
+    created_by: gridData.created_by || 'system',
+    status: gridData.status || 'active'
+  };
+
   const { data, error } = await supabase
     .from('evaluation_grids')
-    .insert([gridData])
+    .insert([dbGridData])
     .select();
 
   if (error) {
@@ -50,14 +59,22 @@ export async function createGrid(gridData: any) {
     throw error;
   }
 
+  console.log("Grille créée:", data?.[0]);
   return data?.[0];
 }
 
 // Mettre à jour une grille
 export async function updateGrid(id: number, gridData: any) {
+  // S'assurer que les données correspondent aux colonnes de la base de données
+  const dbGridData = {
+    name: gridData.name,
+    description: gridData.description,
+    status: gridData.status
+  };
+
   const { data, error } = await supabase
     .from('evaluation_grids')
-    .update(gridData)
+    .update(dbGridData)
     .eq('id', id)
     .select();
 
@@ -71,6 +88,34 @@ export async function updateGrid(id: number, gridData: any) {
 
 // Supprimer une grille
 export async function deleteGrid(id: number) {
+  // D'abord supprimer les sections et questions liées (si la cascade n'est pas configurée côté DB)
+  try {
+    // Récupérer toutes les sections de la grille
+    const { data: sections } = await supabase
+      .from('grid_sections')
+      .select('id')
+      .eq('grid_id', id);
+    
+    if (sections && sections.length > 0) {
+      // Supprimer les questions pour chaque section
+      for (const section of sections) {
+        await supabase
+          .from('questions')
+          .delete()
+          .eq('section_id', section.id);
+      }
+      
+      // Supprimer toutes les sections
+      await supabase
+        .from('grid_sections')
+        .delete()
+        .eq('grid_id', id);
+    }
+  } catch (error) {
+    console.error(`Erreur lors de la suppression des sections/questions pour la grille ${id}:`, error);
+  }
+  
+  // Supprimer la grille elle-même
   const { error } = await supabase
     .from('evaluation_grids')
     .delete()
@@ -88,7 +133,12 @@ export async function deleteGrid(id: number) {
 export async function createGridSection(sectionData: any) {
   const { data, error } = await supabase
     .from('grid_sections')
-    .insert([sectionData])
+    .insert([{
+      grid_id: sectionData.gridId,
+      title: sectionData.title,
+      description: sectionData.description || '',
+      order: sectionData.order || 0
+    }])
     .select();
 
   if (error) {
@@ -103,7 +153,16 @@ export async function createGridSection(sectionData: any) {
 export async function createQuestion(questionData: any) {
   const { data, error } = await supabase
     .from('questions')
-    .insert([questionData])
+    .insert([{
+      section_id: questionData.sectionId,
+      text: questionData.text,
+      type: questionData.type,
+      required: questionData.required,
+      options: questionData.options,
+      min_value: questionData.minValue,
+      max_value: questionData.maxValue,
+      order: questionData.order || 0
+    }])
     .select();
 
   if (error) {
