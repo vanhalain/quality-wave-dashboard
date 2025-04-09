@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 // Define the available languages
@@ -27,7 +28,7 @@ const LanguageContext = createContext<LanguageContextType>(defaultValue);
 // Translation dictionary
 const translations: Record<string, Record<string, string>> = {
   en: {
-    // Dashboard
+    // Unique and non-duplicate translation keys for English
     'Dashboard': 'Dashboard',
     'Campaigns': 'Campaigns',
     'Evaluations': 'Evaluations',
@@ -164,7 +165,7 @@ const translations: Record<string, Record<string, string>> = {
     'Can view evaluation results, create campaigns, and manage team performance.': 'Can view evaluation results, create campaigns, and manage team performance.',
   },
   fr: {
-    // Dashboard
+    // Unique and non-duplicate translation keys for French
     'Dashboard': 'Tableau de bord',
     'Campaigns': 'Campagnes',
     'Evaluations': 'Évaluations',
