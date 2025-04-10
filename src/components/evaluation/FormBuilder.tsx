@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlusCircle, Trash2, Edit, Grid as GridIcon, Star } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Grid as GridIcon, Star, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,11 +16,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+
 interface FormBuilderProps {
   selectedGridId?: number | null;
   readOnly?: boolean;
   onSubmit?: () => void;
 }
+
 export function FormBuilder({
   selectedGridId: propSelectedGridId,
   readOnly = false,
@@ -36,7 +38,8 @@ export function FormBuilder({
     addGrid,
     addQuestionToGrid,
     updateQuestion,
-    deleteQuestion
+    deleteQuestion,
+    updateGrid
   } = useGridStore();
   const {
     toast
@@ -61,12 +64,14 @@ export function FormBuilder({
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [ratingMax, setRatingMax] = useState<number>(5);
+
   const handleAddOption = () => {
     setOptions([...options, {
       label: '',
       value: 0
     }]);
   };
+
   const handleOptionChange = (index: number, field: 'label' | 'value', value: string | number) => {
     const newOptions = [...options];
     newOptions[index] = {
@@ -75,11 +80,13 @@ export function FormBuilder({
     };
     setOptions(newOptions);
   };
+
   const handleRemoveOption = (index: number) => {
     if (options.length > 1) {
       setOptions(options.filter((_, i) => i !== index));
     }
   };
+
   const handleCreateGrid = () => {
     if (!gridName) {
       toast({
@@ -94,14 +101,19 @@ export function FormBuilder({
       description: gridDescription,
       questions: []
     };
-    addGrid(newGrid);
+    const newGridId = addGrid(newGrid);
+    
+    setSelectedGridId(newGridId);
+    
     toast({
       title: "Grille créée",
       description: "La grille d'évaluation a été créée avec succès"
     });
+    
     setGridName('');
     setGridDescription('');
   };
+
   const resetQuestionForm = () => {
     setQuestionText('');
     setQuestionType('text');
@@ -117,6 +129,7 @@ export function FormBuilder({
     setEditingQuestionId(null);
     setIsEditDialogOpen(false);
   };
+
   const handleEditQuestion = (questionId: number) => {
     if (!selectedGridId) return;
     const selectedGrid = grids.find(grid => grid.id === selectedGridId);
@@ -143,6 +156,7 @@ export function FormBuilder({
     setEditingQuestionId(questionId);
     setIsEditDialogOpen(true);
   };
+
   const handleSaveQuestion = () => {
     if (!selectedGridId) {
       toast({
@@ -217,6 +231,7 @@ export function FormBuilder({
     }
     resetQuestionForm();
   };
+
   const handleDeleteQuestion = (gridId: number, questionId: number) => {
     deleteQuestion(gridId, questionId);
     toast({
@@ -224,15 +239,33 @@ export function FormBuilder({
       description: "La question a été supprimée de la grille"
     });
   };
+
   const handleGoToGrids = () => {
     navigate('/grids');
   };
-  const selectedGrid = grids.find(grid => grid.id === selectedGridId);
-  const renderStars = (count: number, selectedCount: number) => {
-    return Array.from({
-      length: count
-    }).map((_, i) => <Star key={i} className={`h-5 w-5 ${i < selectedCount ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />);
+
+  const handleSaveGrid = () => {
+    if (!selectedGridId) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Aucune grille sélectionnée à enregistrer"
+      });
+      return;
+    }
+    
+    updateGrid(selectedGridId, { updatedAt: new Date().toISOString() });
+    
+    toast({
+      title: "Grille enregistrée",
+      description: "La grille d'évaluation a été enregistrée avec succès"
+    });
+    
+    navigate('/grids');
   };
+
+  const selectedGrid = grids.find(grid => grid.id === selectedGridId);
+
   if (readOnly && selectedGrid) {
     return <div className="space-y-4">
         {selectedGrid.questions.map(question => <div key={question.id} className="border rounded-lg p-4 space-y-2">
@@ -300,18 +333,60 @@ export function FormBuilder({
           </div>}
       </div>;
   }
+
   return <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold flex items-center">
           <GridIcon className="h-5 w-5 mr-2" />
           {selectedGrid ? selectedGrid.name : 'Sélectionner une grille'}
         </h2>
-        <Button variant="outline" size="sm" onClick={handleGoToGrids}>
-          Gérer les grilles
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleGoToGrids}>
+            Gérer les grilles
+          </Button>
+          {selectedGrid && (
+            <Button variant="default" size="sm" onClick={handleSaveGrid}>
+              <Save className="h-4 w-4 mr-2" />
+              Enregistrer
+            </Button>
+          )}
+        </div>
       </div>
       
-      
+      {!selectedGrid && (
+        <Card className="bg-muted/40">
+          <CardHeader>
+            <CardTitle>Créer une nouvelle grille</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="gridName">Nom de la grille</Label>
+                <Input
+                  id="gridName"
+                  value={gridName}
+                  onChange={(e) => setGridName(e.target.value)}
+                  placeholder="Saisir un nom pour la grille"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gridDescription">Description</Label>
+                <Textarea
+                  id="gridDescription"
+                  value={gridDescription}
+                  onChange={(e) => setGridDescription(e.target.value)}
+                  placeholder="Description de l'usage de cette grille"
+                  rows={3}
+                />
+              </div>
+              <Button onClick={handleCreateGrid}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Créer la grille
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedGrid && <Card>
           <CardHeader>
@@ -394,6 +469,21 @@ export function FormBuilder({
             {selectedGrid.questions.length === 0 && <div className="text-center py-6 text-gray-500">
                 Aucune question dans cette grille. Ajoutez des questions pour construire votre formulaire.
               </div>}
+              
+            <div className="flex justify-between mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Ajouter une question
+              </Button>
+              
+              <Button onClick={handleSaveGrid}>
+                <Save className="h-4 w-4 mr-2" />
+                Enregistrer la grille
+              </Button>
+            </div>
           </CardContent>
         </Card>}
 

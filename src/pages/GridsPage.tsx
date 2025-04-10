@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Edit, Eye, FileText, Trash } from 'lucide-react';
 import { useGridStore, Grid } from '@/lib/evaluation-grids';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/lib/language-context';
@@ -15,7 +15,7 @@ import { Tables } from '@/integrations/supabase/types';
 type GridType = Tables<'evaluation_grids'>;
 
 export default function GridsPage() {
-  const { grids, deleteGrid } = useGridStore();
+  const { grids: localGrids, deleteGrid } = useGridStore();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -23,6 +23,9 @@ export default function GridsPage() {
   const { language, t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [dbGrids, setDbGrids] = useState<GridType[]>([]);
+  
+  // Combinaison des grilles locales et des grilles Supabase pour affichage
+  const allGrids = [...dbGrids, ...localGrids.filter(lg => !dbGrids.some(db => db.id === lg.id))];
 
   useEffect(() => {
     const loadGrids = async () => {
@@ -46,15 +49,15 @@ export default function GridsPage() {
     loadGrids();
   }, [toast, t]);
 
-  const handleEditGrid = (grid: GridType) => {
+  const handleEditGrid = (grid: GridType | Grid) => {
     navigate(`/grids/editor/${grid.id}`);
   };
 
-  const handleViewGrid = (grid: GridType) => {
+  const handleViewGrid = (grid: GridType | Grid) => {
     navigate(`/grids/editor/${grid.id}?view=true`);
   };
 
-  const handleDeleteGrid = async (grid: GridType) => {
+  const handleDeleteGrid = async (grid: GridType | Grid) => {
     setCurrentGrid(grid);
     setIsDeleteDialogOpen(true);
   };
@@ -62,13 +65,14 @@ export default function GridsPage() {
   const confirmDeleteGrid = async () => {
     if (currentGrid) {
       try {
-        await deleteGridAPI(currentGrid.id);
-        if ('id' in currentGrid) {
+        if ('created_at' in currentGrid) {
+          // C'est une grille Supabase
+          await deleteGridAPI(currentGrid.id);
+          setDbGrids(prev => prev.filter(g => g.id !== currentGrid.id));
+        } else {
+          // C'est une grille locale
           deleteGrid(currentGrid.id);
         }
-        
-        // Mettre à jour la liste après suppression
-        setDbGrids(prev => prev.filter(g => g.id !== currentGrid.id));
         
         toast({
           title: t('Grid deleted'),
@@ -101,9 +105,12 @@ export default function GridsPage() {
   };
 
   // Générer des données simulées pour le nombre de questions
-  const getQuestionsCount = (gridId: number) => {
+  const getQuestionsCount = (grid: Grid | GridType) => {
+    if ('questions' in grid) {
+      return grid.questions.length;
+    }
     // Pour la simplicité, générer un nombre basé sur l'ID de la grille
-    return Math.max(3, (gridId * 2) % 10);
+    return Math.max(3, (grid.id * 2) % 10);
   };
 
   return (
@@ -122,11 +129,16 @@ export default function GridsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dbGrids.map((grid) => (
+          {allGrids.map((grid) => (
             <Card key={grid.id} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle>{grid.name}</CardTitle>
-                <CardDescription className="mt-1">{formatDate(grid.created_at)}</CardDescription>
+                <CardDescription className="mt-1">
+                  {'created_at' in grid 
+                    ? formatDate(grid.created_at) 
+                    : formatDate(grid.createdAt)
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
@@ -134,8 +146,14 @@ export default function GridsPage() {
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>{getQuestionsCount(grid.id)} {t('questions')}</span>
-                    <span className="font-medium">{t('Last modified')}: {formatDate(grid.updated_at)}</span>
+                    <span>{getQuestionsCount(grid)} {t('questions')}</span>
+                    <span className="font-medium">
+                      {t('Last modified')}: {
+                        'updated_at' in grid 
+                          ? formatDate(grid.updated_at) 
+                          : formatDate(grid.updatedAt)
+                      }
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -158,7 +176,7 @@ export default function GridsPage() {
         </div>
       )}
 
-      {!isLoading && dbGrids.length === 0 && (
+      {!isLoading && allGrids.length === 0 && (
         <Card className="p-8 text-center">
           <CardContent>
             <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

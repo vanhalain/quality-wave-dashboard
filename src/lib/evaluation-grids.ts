@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -48,7 +47,7 @@ export interface Evaluation {
 interface GridStore {
   grids: Grid[];
   evaluations: Evaluation[];
-  addGrid: (grid: Omit<Grid, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  addGrid: (grid: Omit<Grid, 'id' | 'createdAt' | 'updatedAt'>) => number;
   updateGrid: (id: number, updates: Partial<Grid>) => void;
   deleteGrid: (id: number) => void;
   getGrid: (id: number) => Grid | undefined;
@@ -108,24 +107,29 @@ export const useGridStore = create<GridStore>()(
       evaluations: [],
       
       addGrid: (grid) => {
+        const newId = Math.max(0, ...get().grids.map((g) => g.id)) + 1;
+        const now = new Date().toISOString();
+        
         set((state) => ({
           grids: [
             ...state.grids,
             {
               ...grid,
-              id: Math.max(0, ...state.grids.map((g) => g.id)) + 1,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
+              id: newId,
+              createdAt: now,
+              updatedAt: now,
             },
           ],
         }));
+        
+        return newId; // Retourne l'ID pour permettre la sélection
       },
       
       updateGrid: (id, updates) => {
         set((state) => ({
           grids: state.grids.map((grid) =>
             grid.id === id
-              ? { ...grid, ...updates, updatedAt: new Date().toISOString() }
+              ? { ...grid, ...updates, updatedAt: updates.updatedAt || new Date().toISOString() }
               : grid
           ),
         }));
@@ -259,6 +263,7 @@ export const useGridStore = create<GridStore>()(
     }),
     {
       name: 'grid-storage',
+      version: 1,
     }
   )
 );

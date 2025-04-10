@@ -1,20 +1,26 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Récupérer toutes les grilles d'évaluation
 export async function fetchGrids() {
-  const { data, error } = await supabase
-    .from('evaluation_grids')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    console.log("Fetching grids from Supabase...");
+    const { data, error } = await supabase
+      .from('evaluation_grids')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Erreur lors de la récupération des grilles:', error);
-    throw error;
+    if (error) {
+      console.error('Erreur lors de la récupération des grilles:', error);
+      throw error;
+    }
+
+    console.log("Grilles récupérées:", data);
+    return data || [];
+  } catch (error) {
+    console.error('Exception lors de la récupération des grilles:', error);
+    // Fallback à l'état local si Supabase échoue
+    return [];
   }
-
-  console.log("Grilles récupérées:", data);
-  return data || [];
 }
 
 // Récupérer une grille par ID
