@@ -27,13 +27,12 @@ export default function GridEditorPage() {
   const isViewMode = searchParams.get('view') === 'true';
   const { t } = useLanguage();
   
-  // Récupérer la grille si on est en mode édition
-  const localGrid = gridId ? getGrid(parseInt(gridId)) : undefined;
-  const [gridData, setGridData] = useState(localGrid);
+  // Initialize gridData state
+  const [gridData, setGridData] = useState<any>(null);
   
   // États pour l'édition du nom et de la description
-  const [gridName, setGridName] = useState(gridData?.name || '');
-  const [gridDescription, setGridDescription] = useState(gridData?.description || '');
+  const [gridName, setGridName] = useState('');
+  const [gridDescription, setGridDescription] = useState('');
 
   useEffect(() => {
     const loadGridData = async () => {
@@ -214,17 +213,19 @@ export default function GridEditorPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="dnd" onValueChange={(value) => setBuilderType(value as 'basic' | 'dnd')}>
+          <Tabs defaultValue="basic" onValueChange={(value) => setBuilderType(value as 'basic' | 'dnd')}>
             <TabsList className="mb-4">
               <TabsTrigger value="basic">{t('Basic Editor')}</TabsTrigger>
               <TabsTrigger value="dnd">{t('Drag & Drop Editor')}</TabsTrigger>
             </TabsList>
             <TabsContent value="basic">
-              <FormBuilder 
-                selectedGridId={gridData?.id} 
-                readOnly={isViewMode}
-                onSaveCallback={handleSaveAndReturn}
-              />
+              {gridData && (
+                <FormBuilder 
+                  selectedGridId={gridData.id} 
+                  readOnly={isViewMode}
+                  onSaveCallback={handleSaveAndReturn}
+                />
+              )}
             </TabsContent>
             <TabsContent value="dnd">
               <DragDropFormBuilder />
