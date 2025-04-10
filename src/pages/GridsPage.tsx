@@ -3,26 +3,34 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Eye, FileText, Trash } from 'lucide-react';
+import { Edit, Eye, FileText, Trash, Plus } from 'lucide-react';
 import { useGridStore, Grid } from '@/lib/evaluation-grids';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/lib/language-context';
-import { fetchGrids, deleteGrid as deleteGridAPI } from '@/services/gridService';
+import { fetchGrids, deleteGrid as deleteGridAPI, createGrid as createGridAPI } from '@/services/gridService';
 import { Tables } from '@/integrations/supabase/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type GridType = Tables<'evaluation_grids'>;
 
 export default function GridsPage() {
-  const { grids: localGrids, deleteGrid } = useGridStore();
+  const { grids: localGrids, deleteGrid, addGrid } = useGridStore();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentGrid, setCurrentGrid] = useState<Grid | GridType | undefined>();
   const { language, t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [dbGrids, setDbGrids] = useState<GridType[]>([]);
+  const [newGridName, setNewGridName] = useState('');
+  const [newGridDescription, setNewGridDescription] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
   
   // Combinaison des grilles locales et des grilles Supabase pour affichage
   const allGrids = [...dbGrids, ...localGrids.filter(lg => !dbGrids.some(db => db.id === lg.id))];
@@ -38,7 +46,7 @@ export default function GridsPage() {
         console.error("Erreur lors du chargement des grilles:", error);
         toast({
           title: t('Error'),
-          description: "Impossible de charger les grilles d'évaluation. Veuillez réessayer.",
+          description: t("Unable to load evaluation grids. Please try again."),
           variant: "destructive",
         });
       } finally {
@@ -82,7 +90,7 @@ export default function GridsPage() {
         console.error("Erreur lors de la suppression de la grille:", error);
         toast({
           title: t('Error'),
-          description: "Impossible de supprimer la grille. Veuillez réessayer.",
+          description: t("Unable to delete the grid. Please try again."),
           variant: "destructive",
         });
       } finally {
@@ -92,7 +100,70 @@ export default function GridsPage() {
   };
 
   const handleCreateGrid = () => {
-    navigate('/grids/editor');
+    setIsCreateDialogOpen(true);
+  };
+
+  const confirmCreateGrid = async () => {
+    if (!newGridName.trim()) {
+      toast({
+        title: t('Error'),
+        description: t('Grid name is required'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    
+    try {
+      // Try to create in Supabase first
+      let gridId;
+      try {
+        const newGrid = await createGridAPI({
+          name: newGridName,
+          description: newGridDescription,
+        });
+        
+        // If successful, add to dbGrids
+        if (newGrid) {
+          setDbGrids(prev => [newGrid, ...prev]);
+          gridId = newGrid.id;
+        }
+      } catch (error) {
+        console.error("Error creating grid in Supabase:", error);
+        // Fall back to local storage
+        const localGridData = {
+          name: newGridName,
+          description: newGridDescription,
+          questions: []
+        };
+        gridId = addGrid(localGridData);
+      }
+      
+      toast({
+        title: t('Grid created'),
+        description: t('The grid has been created successfully'),
+      });
+      
+      setIsCreateDialogOpen(false);
+      setNewGridName('');
+      setNewGridDescription('');
+      
+      // Navigate to the editor with the new grid
+      if (gridId) {
+        navigate(`/grids/editor/${gridId}`);
+      }
+      
+    } catch (error) {
+      console.error("Error creating grid:", error);
+      toast({
+        title: t('Error'),
+        description: t('Unable to create the grid. Please try again.'),
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -118,7 +189,7 @@ export default function GridsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-qa-charcoal">{t('Evaluation Grids')}</h1>
         <Button onClick={handleCreateGrid}>
-          <FileText className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-2" />
           {t('Create Grid')}
         </Button>
       </div>
@@ -185,13 +256,14 @@ export default function GridsPage() {
               {t('Start by creating your first evaluation grid.')}
             </p>
             <Button onClick={handleCreateGrid}>
-              <FileText className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               {t('Create Grid')}
             </Button>
           </CardContent>
         </Card>
       )}
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -209,6 +281,50 @@ export default function GridsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Grid Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Create New Grid')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="gridName">{t('Grid Name')}</Label>
+              <Input 
+                id="gridName" 
+                value={newGridName} 
+                onChange={(e) => setNewGridName(e.target.value)}
+                placeholder={t('Enter grid name')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gridDescription">{t('Description')}</Label>
+              <Textarea 
+                id="gridDescription" 
+                value={newGridDescription} 
+                onChange={(e) => setNewGridDescription(e.target.value)}
+                placeholder={t('Enter grid description')}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button 
+              onClick={confirmCreateGrid}
+              disabled={isCreating || !newGridName.trim()}
+            >
+              {isCreating ? t('Creating...') : t('Create and Edit')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

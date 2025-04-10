@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { PlusCircle, Trash2, Edit, Grid as GridIcon, Star, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,34 +17,40 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useLanguage } from '@/lib/language-context';
 
 interface FormBuilderProps {
   selectedGridId?: number | null;
   readOnly?: boolean;
   onSubmit?: () => void;
+  onSaveCallback?: () => void;
 }
+
+// Function to render star rating
+const renderStars = (count: number, selectedCount: number) => {
+  return Array.from({ length: count }).map((_, index) => (
+    <Star
+      key={index}
+      className={`h-6 w-6 ${
+        index < selectedCount ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+      }`}
+    />
+  ));
+};
 
 export function FormBuilder({
   selectedGridId: propSelectedGridId,
   readOnly = false,
-  onSubmit
+  onSubmit,
+  onSaveCallback
 }: FormBuilderProps = {}) {
-  const {
-    gridId
-  } = useParams();
+  const { gridId } = useParams();
   const navigate = useNavigate();
   const initialSelectedGridId = propSelectedGridId || (gridId ? parseInt(gridId) : null) || null;
-  const {
-    grids,
-    addGrid,
-    addQuestionToGrid,
-    updateQuestion,
-    deleteQuestion,
-    updateGrid
-  } = useGridStore();
-  const {
-    toast
-  } = useToast();
+  const { grids, addGrid, addQuestionToGrid, updateQuestion, deleteQuestion, updateGrid } = useGridStore();
+  const { toast } = useToast();
+  const { t, language } = useLanguage();
+  
   const [gridName, setGridName] = useState('');
   const [gridDescription, setGridDescription] = useState('');
   const [questionText, setQuestionText] = useState('');
@@ -91,8 +98,8 @@ export function FormBuilder({
     if (!gridName) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Le nom de la grille est requis"
+        title: t('Error'),
+        description: t('Grid name is required')
       });
       return;
     }
@@ -106,8 +113,8 @@ export function FormBuilder({
     setSelectedGridId(newGridId);
     
     toast({
-      title: "Grille créée",
-      description: "La grille d'évaluation a été créée avec succès"
+      title: t('Grid created'),
+      description: t('The evaluation grid has been created successfully')
     });
     
     setGridName('');
@@ -161,16 +168,16 @@ export function FormBuilder({
     if (!selectedGridId) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Veuillez sélectionner une grille"
+        title: t('Error'),
+        description: t('Please select a grid')
       });
       return;
     }
     if (!questionText) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Le texte de la question est requis"
+        title: t('Error'),
+        description: t('Question text is required')
       });
       return;
     }
@@ -179,8 +186,8 @@ export function FormBuilder({
       if (options.some(opt => !opt.label)) {
         toast({
           variant: "destructive",
-          title: "Erreur",
-          description: "Tous les libellés d'options doivent être remplis"
+          title: t('Error'),
+          description: t('All option labels must be filled')
         });
         return;
       }
@@ -207,11 +214,11 @@ export function FormBuilder({
       ...(questionType === 'toggle' && {
         options: [{
           id: 1,
-          label: 'Non',
+          label: t('No'),
           value: 0
         }, {
           id: 2,
-          label: 'Oui',
+          label: t('Yes'),
           value: 1
         }]
       })
@@ -219,14 +226,14 @@ export function FormBuilder({
     if (isEditMode && editingQuestionId !== null) {
       updateQuestion(selectedGridId, editingQuestionId, questionData);
       toast({
-        title: "Question mise à jour",
-        description: "La question a été modifiée avec succès"
+        title: t('Question updated'),
+        description: t('The question has been modified successfully')
       });
     } else {
       addQuestionToGrid(selectedGridId, questionData);
       toast({
-        title: "Question ajoutée",
-        description: "La question a été ajoutée à la grille"
+        title: t('Question added'),
+        description: t('The question has been added to the grid')
       });
     }
     resetQuestionForm();
@@ -235,8 +242,8 @@ export function FormBuilder({
   const handleDeleteQuestion = (gridId: number, questionId: number) => {
     deleteQuestion(gridId, questionId);
     toast({
-      title: "Question supprimée",
-      description: "La question a été supprimée de la grille"
+      title: t('Question deleted'),
+      description: t('The question has been removed from the grid')
     });
   };
 
@@ -248,8 +255,8 @@ export function FormBuilder({
     if (!selectedGridId) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Aucune grille sélectionnée à enregistrer"
+        title: t('Error'),
+        description: t('No grid selected to save')
       });
       return;
     }
@@ -257,11 +264,15 @@ export function FormBuilder({
     updateGrid(selectedGridId, { updatedAt: new Date().toISOString() });
     
     toast({
-      title: "Grille enregistrée",
-      description: "La grille d'évaluation a été enregistrée avec succès"
+      title: t('Grid saved'),
+      description: t('The evaluation grid has been saved successfully')
     });
     
-    navigate('/grids');
+    if (onSaveCallback) {
+      onSaveCallback();
+    } else {
+      navigate('/grids');
+    }
   };
 
   const selectedGrid = grids.find(grid => grid.id === selectedGridId);
@@ -273,11 +284,11 @@ export function FormBuilder({
               {question.text} {question.required && <span className="text-red-500">*</span>}
             </label>
             
-            {question.type === 'text' && <Textarea placeholder="Votre réponse" />}
+            {question.type === 'text' && <Textarea placeholder={t('Your answer')} />}
             
             {question.type === 'select' && question.options && <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une option" />
+                  <SelectValue placeholder={t('Select an option')} />
                 </SelectTrigger>
                 <SelectContent>
                   {question.options.map(option => <SelectItem key={option.id} value={option.id.toString()}>
@@ -307,13 +318,13 @@ export function FormBuilder({
                 </div>
                 <Slider defaultValue={[Math.floor((question.minValue! + question.maxValue!) / 2)]} min={question.minValue} max={question.maxValue} step={1} />
                 <div className="text-center text-sm">
-                  Valeur: {Math.floor((question.minValue! + question.maxValue!) / 2)}
+                  {t('Value')}: {Math.floor((question.minValue! + question.maxValue!) / 2)}
                 </div>
               </div>}
             
             {question.type === 'toggle' && <div className="flex items-center space-x-2">
                 <Switch id={`toggle-${question.id}`} />
-                <Label htmlFor={`toggle-${question.id}`}>Oui/Non</Label>
+                <Label htmlFor={`toggle-${question.id}`}>{t('Yes/No')}</Label>
               </div>}
             
             {question.type === 'rating' && <div className="space-y-2">
@@ -321,14 +332,14 @@ export function FormBuilder({
                   {renderStars(question.maxValue || 5, 0)}
                 </div>
                 <div className="text-sm text-gray-500">
-                  Cliquez sur une étoile pour noter
+                  {t('Click on a star to rate')}
                 </div>
               </div>}
           </div>)}
         
         {onSubmit && <div className="flex justify-end">
             <Button onClick={onSubmit}>
-              Soumettre l'évaluation
+              {t('Submit evaluation')}
             </Button>
           </div>}
       </div>;
@@ -338,59 +349,20 @@ export function FormBuilder({
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold flex items-center">
           <GridIcon className="h-5 w-5 mr-2" />
-          {selectedGrid ? selectedGrid.name : 'Sélectionner une grille'}
+          {selectedGrid ? selectedGrid.name : t('Select a grid')}
         </h2>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleGoToGrids}>
-            Gérer les grilles
+        
+        {selectedGrid && (
+          <Button variant="default" size="sm" onClick={handleSaveGrid}>
+            <Save className="h-4 w-4 mr-2" />
+            {t('Save')}
           </Button>
-          {selectedGrid && (
-            <Button variant="default" size="sm" onClick={handleSaveGrid}>
-              <Save className="h-4 w-4 mr-2" />
-              Enregistrer
-            </Button>
-          )}
-        </div>
+        )}
       </div>
-      
-      {!selectedGrid && (
-        <Card className="bg-muted/40">
-          <CardHeader>
-            <CardTitle>Créer une nouvelle grille</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="gridName">Nom de la grille</Label>
-                <Input
-                  id="gridName"
-                  value={gridName}
-                  onChange={(e) => setGridName(e.target.value)}
-                  placeholder="Saisir un nom pour la grille"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gridDescription">Description</Label>
-                <Textarea
-                  id="gridDescription"
-                  value={gridDescription}
-                  onChange={(e) => setGridDescription(e.target.value)}
-                  placeholder="Description de l'usage de cette grille"
-                  rows={3}
-                />
-              </div>
-              <Button onClick={handleCreateGrid}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Créer la grille
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {selectedGrid && <Card>
           <CardHeader>
-            <CardTitle>Aperçu: {selectedGrid.name}</CardTitle>
+            <CardTitle>{t('Preview')}: {selectedGrid.name}</CardTitle>
           </CardHeader>
           <CardContent>
             <Accordion type="multiple" className="w-full">
@@ -405,11 +377,11 @@ export function FormBuilder({
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
-                      {question.type === 'text' && <Input placeholder="Votre réponse" />}
+                      {question.type === 'text' && <Input placeholder={t('Your answer')} />}
                       
                       {question.type === 'select' && question.options && <Select>
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez une option" />
+                            <SelectValue placeholder={t('Select an option')} />
                           </SelectTrigger>
                           <SelectContent>
                             {question.options.map(option => <SelectItem key={option.id} value={option.id.toString()}>
@@ -439,13 +411,13 @@ export function FormBuilder({
                           </div>
                           <Slider defaultValue={[Math.floor((question.minValue! + question.maxValue!) / 2)]} min={question.minValue} max={question.maxValue} step={1} />
                           <div className="text-center text-sm">
-                            Valeur: {Math.floor((question.minValue! + question.maxValue!) / 2)}
+                            {t('Value')}: {Math.floor((question.minValue! + question.maxValue!) / 2)}
                           </div>
                         </div>}
                       
                       {question.type === 'toggle' && <div className="flex items-center space-x-2">
                           <Switch id="toggle-preview" />
-                          <Label htmlFor="toggle-preview">Oui/Non</Label>
+                          <Label htmlFor="toggle-preview">{t('Yes/No')}</Label>
                         </div>}
                       
                       {question.type === 'rating' && <div className="space-y-2">
@@ -453,13 +425,27 @@ export function FormBuilder({
                             {renderStars(question.maxValue || 5, 0)}
                           </div>
                           <div className="text-sm text-gray-500">
-                            Cliquez sur une étoile pour noter
+                            {t('Click on a star to rate')}
                           </div>
                         </div>}
                       
-                      <div className="flex justify-end space-x-2 bg-zinc-200">
-                        
-                        
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditQuestion(question.id)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          {t('Edit')}
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteQuestion(selectedGrid.id, question.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t('Delete')}
+                        </Button>
                       </div>
                     </div>
                   </AccordionContent>
@@ -467,7 +453,7 @@ export function FormBuilder({
             </Accordion>
             
             {selectedGrid.questions.length === 0 && <div className="text-center py-6 text-gray-500">
-                Aucune question dans cette grille. Ajoutez des questions pour construire votre formulaire.
+                {t('No questions in this grid. Add questions to build your form.')}
               </div>}
               
             <div className="flex justify-between mt-6">
@@ -476,12 +462,12 @@ export function FormBuilder({
                 onClick={() => setIsEditDialogOpen(true)}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Ajouter une question
+                {t('Add question')}
               </Button>
               
               <Button onClick={handleSaveGrid}>
                 <Save className="h-4 w-4 mr-2" />
-                Enregistrer la grille
+                {t('Save grid')}
               </Button>
             </div>
           </CardContent>
@@ -490,64 +476,64 @@ export function FormBuilder({
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Modifier la question</DialogTitle>
+            <DialogTitle>{isEditMode ? t('Edit question') : t('Add new question')}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="editQuestionText">Question</Label>
-              <Input id="editQuestionText" value={questionText} onChange={e => setQuestionText(e.target.value)} placeholder="Texte de la question" />
+              <Label htmlFor="editQuestionText">{t('Question')}</Label>
+              <Input id="editQuestionText" value={questionText} onChange={e => setQuestionText(e.target.value)} placeholder={t('Question text')} />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="editQuestionType">Type de question</Label>
+              <Label htmlFor="editQuestionType">{t('Question type')}</Label>
               <Select value={questionType} onValueChange={value => setQuestionType(value as QuestionType)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Type de question" />
+                  <SelectValue placeholder={t('Question type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="text">Texte</SelectItem>
-                  <SelectItem value="select">Liste déroulante</SelectItem>
-                  <SelectItem value="radio">Boutons radio</SelectItem>
-                  <SelectItem value="checkbox">Cases à cocher</SelectItem>
-                  <SelectItem value="slider">Curseur</SelectItem>
-                  <SelectItem value="toggle">Interrupteur Oui/Non</SelectItem>
-                  <SelectItem value="rating">Notation par étoiles</SelectItem>
+                  <SelectItem value="text">{t('Text')}</SelectItem>
+                  <SelectItem value="select">{t('Dropdown')}</SelectItem>
+                  <SelectItem value="radio">{t('Radio buttons')}</SelectItem>
+                  <SelectItem value="checkbox">{t('Checkboxes')}</SelectItem>
+                  <SelectItem value="slider">{t('Slider')}</SelectItem>
+                  <SelectItem value="toggle">{t('Yes/No toggle')}</SelectItem>
+                  <SelectItem value="rating">{t('Star rating')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             {['select', 'radio', 'checkbox'].includes(questionType) && <div className="space-y-3">
-                <Label>Options</Label>
+                <Label>{t('Options')}</Label>
                 {options.map((option, index) => <div key={index} className="flex items-center gap-2">
-                    <Input value={option.label} onChange={e => handleOptionChange(index, 'label', e.target.value)} placeholder="Libellé" className="flex-grow" />
-                    <Input type="number" value={option.value} onChange={e => handleOptionChange(index, 'value', e.target.value)} placeholder="Valeur" className="w-24" />
+                    <Input value={option.label} onChange={e => handleOptionChange(index, 'label', e.target.value)} placeholder={t('Label')} className="flex-grow" />
+                    <Input type="number" value={option.value} onChange={e => handleOptionChange(index, 'value', e.target.value)} placeholder={t('Value')} className="w-24" />
                     <Button variant="outline" size="icon" onClick={() => handleRemoveOption(index)} disabled={options.length <= 1}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>)}
                 <Button variant="outline" onClick={handleAddOption} className="w-full">
                   <PlusCircle className="h-4 w-4 mr-2" />
-                  Ajouter une option
+                  {t('Add option')}
                 </Button>
               </div>}
             
             {questionType === 'slider' && <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="editMinValue">Valeur minimale</Label>
+                  <Label htmlFor="editMinValue">{t('Minimum value')}</Label>
                   <Input id="editMinValue" type="number" value={minValue} onChange={e => setMinValue(Number(e.target.value))} className="w-24" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="editMaxValue">Valeur maximale</Label>
+                  <Label htmlFor="editMaxValue">{t('Maximum value')}</Label>
                   <Input id="editMaxValue" type="number" value={maxValue} onChange={e => setMaxValue(Number(e.target.value))} className="w-24" />
                 </div>
               </div>}
             
             {questionType === 'rating' && <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="editRatingMax">Nombre d'étoiles</Label>
+                  <Label htmlFor="editRatingMax">{t('Number of stars')}</Label>
                   <Select value={ratingMax.toString()} onValueChange={value => setRatingMax(parseInt(value))}>
                     <SelectTrigger className="w-24">
-                      <SelectValue placeholder="Nombre" />
+                      <SelectValue placeholder={t('Number')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="3">3</SelectItem>
@@ -563,12 +549,12 @@ export function FormBuilder({
             
             <div className="flex items-center space-x-2">
               <Checkbox id="editRequired" checked={required} onCheckedChange={checked => setRequired(!!checked)} />
-              <Label htmlFor="editRequired">Question obligatoire</Label>
+              <Label htmlFor="editRequired">{t('Required question')}</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetQuestionForm}>Annuler</Button>
-            <Button onClick={handleSaveQuestion}>Mettre à jour</Button>
+            <Button variant="outline" onClick={resetQuestionForm}>{t('Cancel')}</Button>
+            <Button onClick={handleSaveQuestion}>{isEditMode ? t('Update') : t('Add')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
