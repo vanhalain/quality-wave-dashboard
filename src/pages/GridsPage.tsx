@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Eye, FileText, Trash, Plus } from 'lucide-react';
+import { Edit, Eye, FileText, Trash, Plus, LayoutGrid, List } from 'lucide-react';
 import { useGridStore, Grid } from '@/lib/evaluation-grids';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -15,8 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type GridType = Tables<'evaluation_grids'>;
+type ViewMode = 'grid' | 'list';
 
 export default function GridsPage() {
   const { grids: localGrids, deleteGrid, addGrid } = useGridStore();
@@ -31,6 +34,7 @@ export default function GridsPage() {
   const [newGridName, setNewGridName] = useState('');
   const [newGridDescription, setNewGridDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   
   // Combinaison des grilles locales et des grilles Supabase pour affichage
   const allGrids = [...dbGrids, ...localGrids.filter(lg => !dbGrids.some(db => db.id === lg.id))];
@@ -184,14 +188,126 @@ export default function GridsPage() {
     return Math.max(3, (grid.id * 2) % 10);
   };
 
+  const renderGridView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {allGrids.map((grid) => (
+        <Card key={grid.id} className="overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle>{grid.name}</CardTitle>
+            <CardDescription className="mt-1">
+              {'created_at' in grid 
+                ? formatDate(grid.created_at) 
+                : formatDate(grid.createdAt)
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+              {grid.description || ''}
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{getQuestionsCount(grid)} {t('questions')}</span>
+                <span className="font-medium">
+                  {t('Last modified')}: {
+                    'updated_at' in grid 
+                      ? formatDate(grid.updated_at) 
+                      : formatDate(grid.updatedAt)
+                  }
+                </span>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
+            <Button variant="ghost" size="sm" onClick={() => handleViewGrid(grid)}>
+              <Eye className="h-4 w-4 mr-2" />
+              {t('View')}
+            </Button>
+            <div className="flex space-x-2">
+              <Button variant="ghost" size="sm" onClick={() => handleEditGrid(grid)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => handleDeleteGrid(grid)}>
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderListView = () => (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('Name')}</TableHead>
+              <TableHead>{t('Description')}</TableHead>
+              <TableHead>{t('Questions')}</TableHead>
+              <TableHead>{t('Created')}</TableHead>
+              <TableHead>{t('Last modified')}</TableHead>
+              <TableHead className="text-right">{t('Actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {allGrids.map((grid) => (
+              <TableRow key={grid.id}>
+                <TableCell className="font-medium">{grid.name}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{grid.description || ''}</TableCell>
+                <TableCell>{getQuestionsCount(grid)}</TableCell>
+                <TableCell>
+                  {'created_at' in grid 
+                    ? formatDate(grid.created_at) 
+                    : formatDate(grid.createdAt)
+                  }
+                </TableCell>
+                <TableCell>
+                  {'updated_at' in grid 
+                    ? formatDate(grid.updated_at) 
+                    : formatDate(grid.updatedAt)
+                  }
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleViewGrid(grid)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleEditGrid(grid)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteGrid(grid)}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-qa-charcoal">{t('Evaluation Grids')}</h1>
-        <Button onClick={handleCreateGrid}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('Create Grid')}
-        </Button>
+        <div className="flex items-center space-x-4">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value: ViewMode) => value && setViewMode(value)}>
+            <ToggleGroupItem value="grid" aria-label={t('Grid view')}>
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label={t('List view')}>
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Button onClick={handleCreateGrid}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('Create Grid')}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -199,68 +315,25 @@ export default function GridsPage() {
           <p>{t('Loading')}...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allGrids.map((grid) => (
-            <Card key={grid.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle>{grid.name}</CardTitle>
-                <CardDescription className="mt-1">
-                  {'created_at' in grid 
-                    ? formatDate(grid.created_at) 
-                    : formatDate(grid.createdAt)
-                  }
-                </CardDescription>
-              </CardHeader>
+        <>
+          {allGrids.length > 0 ? (
+            viewMode === 'grid' ? renderGridView() : renderListView()
+          ) : (
+            <Card className="p-8 text-center">
               <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {grid.description || ''}
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium mb-2">{t('No grids')}</p>
+                <p className="text-muted-foreground mb-4">
+                  {t('Start by creating your first evaluation grid.')}
                 </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{getQuestionsCount(grid)} {t('questions')}</span>
-                    <span className="font-medium">
-                      {t('Last modified')}: {
-                        'updated_at' in grid 
-                          ? formatDate(grid.updated_at) 
-                          : formatDate(grid.updatedAt)
-                      }
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
-                <Button variant="ghost" size="sm" onClick={() => handleViewGrid(grid)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  {t('View')}
+                <Button onClick={handleCreateGrid}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('Create Grid')}
                 </Button>
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditGrid(grid)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteGrid(grid)}>
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
+              </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
-
-      {!isLoading && allGrids.length === 0 && (
-        <Card className="p-8 text-center">
-          <CardContent>
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">{t('No grids')}</p>
-            <p className="text-muted-foreground mb-4">
-              {t('Start by creating your first evaluation grid.')}
-            </p>
-            <Button onClick={handleCreateGrid}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('Create Grid')}
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Dialog */}
